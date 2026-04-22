@@ -9,3 +9,4 @@ C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Domain\obj\Debug\
 C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Domain\obj\Debug\net9.0\refint\Domain.dll
 C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Domain\obj\Debug\net9.0\Domain.pdb
 C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Domain\obj\Debug\net9.0\ref\Domain.dll
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Domain\obj\Debug\net9.0\Domain.sourcelink.json

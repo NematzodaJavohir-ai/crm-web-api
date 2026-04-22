@@ -22,8 +22,9 @@ public class AuthController(IAuthService service):BaseController
     }
 
     [HttpPost("send-reset-password-to-email")]
-    public async Task<IActionResult>SendResetPasswordToEmail(SendEmailDto dto,CancellationToken ct)
+    public async Task<IActionResult>SendResetPasswordToEmail([FromBody]SendEmailDto dto,CancellationToken ct)
     {
+  
         return HandleResult(await service.SendEmailToResetPasswordAsync(dto,ct));
     }
 

@@ -146,3 +146,4 @@ C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\CrmWebApi\obj\Deb
 C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\CrmWebApi\obj\Debug\net9.0\CrmWebApi.pdb
 C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\CrmWebApi\obj\Debug\net9.0\CrmWebApi.genruntimeconfig.cache
 C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\CrmWebApi\obj\Debug\net9.0\ref\CrmWebApi.dll
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\CrmWebApi\obj\Debug\net9.0\CrmWebApi.sourcelink.json

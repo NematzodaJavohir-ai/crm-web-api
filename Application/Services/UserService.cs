@@ -59,33 +59,36 @@ public class UserService(IUserRepository repository) : IUserService
 
 
     }
-    public async Task<Result<UpdateUserResponseDto>>UpdateUserAsync(int id,UpdateUserDto dto,CancellationToken ct = default)
-    {
-       var user = await repository.GetUserByIdAsync(id,ct);
-       if(user == null)return Result<UpdateUserResponseDto>.Fail("User Not Found!",ErrorType.NotFound);
+   public async Task<Result<UpdateUserResponseDto>> UpdateUserAsync(int id, UpdateUserDto dto, CancellationToken ct = default)
+{
+    var user = await repository.GetUserByIdAsync(id, ct);
+    if (user == null) return Result<UpdateUserResponseDto>.Fail("User Not Found!", ErrorType.NotFound);
 
-       if(user.PhoneNumber!=dto.PhoneNumber && await repository.PhoneExistsAsync(dto.PhoneNumber,ct))return Result<UpdateUserResponseDto>.Fail("Phone number is alredy Taken",ErrorType.Conflict);
-       if(user.Email!=dto.Email && await repository.EmailExistsAsync(dto.Email))return Result<UpdateUserResponseDto>.Fail("Email is alredy Taken",ErrorType.Conflict);
-      
-      user.FirstName = dto.FirstName.Trim();
-        user.LastName = dto.LastName.Trim();
-        user.Email = dto.Email.Trim().ToLower();
-        user.PhoneNumber = dto.PhoneNumber.Trim();
+    var roleName = user.Role?.Name ?? "No Role";
 
-       await repository.UpdateUserAsync(user,ct);
-       await repository.SaveChangesAsync(ct);
+    if (user.PhoneNumber != dto.PhoneNumber && await repository.PhoneExistsAsync(dto.PhoneNumber, ct))
+        return Result<UpdateUserResponseDto>.Fail("Phone number is already Taken", ErrorType.Conflict);
+    if (user.Email != dto.Email && await repository.EmailExistsAsync(dto.Email))
+        return Result<UpdateUserResponseDto>.Fail("Email is already Taken", ErrorType.Conflict);
 
-       var response = new UpdateUserResponseDto(
+    user.FirstName = dto.FirstName.Trim();
+    user.LastName = dto.LastName.Trim();
+    user.Email = dto.Email.Trim().ToLower();
+    user.PhoneNumber = dto.PhoneNumber.Trim();
+
+    await repository.UpdateUserAsync(user, ct);
+    await repository.SaveChangesAsync(ct);
+
+    var response = new UpdateUserResponseDto(
         Id: user.Id,
         FirstName: user.FirstName,
         LastName: user.LastName,
         PhoneNumber: user.PhoneNumber,
         Email: user.Email,
-        Role: user.Role?.Name ?? "No Role"
+        Role: roleName 
     );
 
     return Result<UpdateUserResponseDto>.Ok(response);
-   
-    }
+}
 
 }

@@ -54,7 +54,9 @@ public class UserRepository(DataContext context) : IUserRepository
 
     public async Task<IEnumerable<User>> GetUsersAsync(CancellationToken cancellationToken = default)
     {
-        return await context.Users.AsNoTracking().ToListAsync(cancellationToken);
+        return await context.Users.AsNoTracking()
+                                  .Include(us => us.Role)
+                                  .ToListAsync(cancellationToken);
     }
 
     public async Task<bool> PhoneExistsAsync(string phone, CancellationToken cancellationToken = default)
