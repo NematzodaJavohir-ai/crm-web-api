@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebApi.Controllers;
 
+// This is test message!
+
 namespace CrmWebApi.Controllers;
 [ApiController]
 [Route("api/users")]
