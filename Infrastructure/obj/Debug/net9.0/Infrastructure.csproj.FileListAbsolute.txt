@@ -1,0 +1,17 @@
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\bin\Debug\net9.0\Infrastructure.deps.json
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\bin\Debug\net9.0\Infrastructure.dll
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\bin\Debug\net9.0\Infrastructure.pdb
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\bin\Debug\net9.0\Application.dll
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\bin\Debug\net9.0\Domain.dll
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\bin\Debug\net9.0\Domain.pdb
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\bin\Debug\net9.0\Application.pdb
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\obj\Debug\net9.0\Infrastructure.csproj.AssemblyReference.cache
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\obj\Debug\net9.0\Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\obj\Debug\net9.0\Infrastructure.AssemblyInfoInputs.cache
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\obj\Debug\net9.0\Infrastructure.AssemblyInfo.cs
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\obj\Debug\net9.0\Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\obj\Debug\net9.0\Infrastr.15EFFBFE.Up2Date
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\obj\Debug\net9.0\Infrastructure.dll
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\obj\Debug\net9.0\refint\Infrastructure.dll
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\obj\Debug\net9.0\Infrastructure.pdb
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Infrastructure\obj\Debug\net9.0\ref\Infrastructure.dll

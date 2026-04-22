@@ -1,0 +1,15 @@
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\bin\Debug\net9.0\Application.deps.json
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\bin\Debug\net9.0\Application.dll
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\bin\Debug\net9.0\Application.pdb
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\bin\Debug\net9.0\Domain.dll
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\bin\Debug\net9.0\Domain.pdb
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\obj\Debug\net9.0\Application.csproj.AssemblyReference.cache
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\obj\Debug\net9.0\Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\obj\Debug\net9.0\Application.AssemblyInfoInputs.cache
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\obj\Debug\net9.0\Application.AssemblyInfo.cs
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\obj\Debug\net9.0\Application.csproj.CoreCompileInputs.cache
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\obj\Debug\net9.0\Applicat.44B5EDA2.Up2Date
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\obj\Debug\net9.0\Application.dll
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\obj\Debug\net9.0\refint\Application.dll
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\obj\Debug\net9.0\Application.pdb
+C:\Users\j7\OneDrive\Desktop\SoftClub\C#\.Net-WebApi\CrmWebApi\Application\obj\Debug\net9.0\ref\Application.dll
