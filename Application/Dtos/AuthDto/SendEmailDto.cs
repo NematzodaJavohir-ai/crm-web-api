@@ -1,6 +1,6 @@
 namespace Application.Dtos.AuthDto;
 
-public record SendEmailDto(
-    string Email
-);
-
+public class SendEmailDto
+{
+    public string Email { get; set; } = null!;
+}
