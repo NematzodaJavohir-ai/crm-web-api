@@ -1,0 +1,18 @@
+using System;
+
+namespace Application.Dtos.StudentDto;
+
+public class StudentResponseDto
+{
+   public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public string FullName { get; set; } = null!;
+    public string Email { get; set; } = null!;
+    public string? Phone { get; set; }
+    public string? AvatarUrl { get; set; }
+    public string? TelegramUsername { get; set; }
+    public string? GithubUrl { get; set; }
+    public string? AboutMe { get; set; }
+    public DateTime? DateOfBirth { get; set; }
+    public DateTime EnrollDate { get; set; }
+}
