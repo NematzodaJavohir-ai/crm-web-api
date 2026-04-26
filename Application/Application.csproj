@@ -8,6 +8,17 @@
  <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="5.0.17" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.0" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Dtos\AttendanceDto\" />
+    <Folder Include="Dtos\CourseDto\" />
+    <Folder Include="Dtos\GroupDto\" />
+    <Folder Include="Dtos\GroupStudentDto\" />
+    <Folder Include="Dtos\LessonDto\" />
+    <Folder Include="Dtos\MentorDto\" />
+    <Folder Include="Dtos\NotificationDto\" />
+    <Folder Include="Dtos\StudentDto\" />
+    <Folder Include="Dtos\WeeklyResultDto\" />
+  </ItemGroup>
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
