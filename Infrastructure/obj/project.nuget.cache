@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "/+VxXuCY9O0=",
+  "dgSpecHash": "b/jSNalYL54=",
   "success": true,
   "projectFilePath": "C:\\Users\\j7\\OneDrive\\Desktop\\SoftClub\\C#\\.Net-WebApi\\CrmWebApi\\Infrastructure\\Infrastructure.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\j7\\.nuget\\packages\\bcrypt.net-next\\4.1.0\\bcrypt.net-next.4.1.0.nupkg.sha512",
     "C:\\Users\\j7\\.nuget\\packages\\microsoft.aspnetcore.authorization\\9.0.0\\microsoft.aspnetcore.authorization.9.0.0.nupkg.sha512",
+    "C:\\Users\\j7\\.nuget\\packages\\microsoft.aspnetcore.http.features\\5.0.17\\microsoft.aspnetcore.http.features.5.0.17.nupkg.sha512",
     "C:\\Users\\j7\\.nuget\\packages\\microsoft.aspnetcore.metadata\\9.0.0\\microsoft.aspnetcore.metadata.9.0.0.nupkg.sha512",
     "C:\\Users\\j7\\.nuget\\packages\\microsoft.aspnetcore.openapi\\9.0.0\\microsoft.aspnetcore.openapi.9.0.0.nupkg.sha512",
     "C:\\Users\\j7\\.nuget\\packages\\microsoft.entityframeworkcore\\9.0.0\\microsoft.entityframeworkcore.9.0.0.nupkg.sha512",
@@ -28,7 +29,8 @@
     "C:\\Users\\j7\\.nuget\\packages\\microsoft.openapi\\1.6.17\\microsoft.openapi.1.6.17.nupkg.sha512",
     "C:\\Users\\j7\\.nuget\\packages\\npgsql\\9.0.2\\npgsql.9.0.2.nupkg.sha512",
     "C:\\Users\\j7\\.nuget\\packages\\npgsql.entityframeworkcore.postgresql\\9.0.0\\npgsql.entityframeworkcore.postgresql.9.0.0.nupkg.sha512",
-    "C:\\Users\\j7\\.nuget\\packages\\system.identitymodel.tokens.jwt\\8.17.0\\system.identitymodel.tokens.jwt.8.17.0.nupkg.sha512"
+    "C:\\Users\\j7\\.nuget\\packages\\system.identitymodel.tokens.jwt\\8.17.0\\system.identitymodel.tokens.jwt.8.17.0.nupkg.sha512",
+    "C:\\Users\\j7\\.nuget\\packages\\system.io.pipelines\\5.0.2\\system.io.pipelines.5.0.2.nupkg.sha512"
   ],
   "logs": []
 }

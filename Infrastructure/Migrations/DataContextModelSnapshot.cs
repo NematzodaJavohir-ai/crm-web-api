@@ -267,6 +267,10 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("PhotoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("Specialization")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -390,6 +394,10 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Phone")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<string>("PhotoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("TelegramUsername")
                         .HasMaxLength(100)
