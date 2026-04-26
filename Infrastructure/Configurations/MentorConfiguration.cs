@@ -20,6 +20,11 @@ public class MentorConfiguration : IEntityTypeConfiguration<Mentor>
         builder.Property(m => m.Bio)
             .HasMaxLength(1000);
 
+            
+            builder.Property(s => s.PhotoUrl)
+            .HasMaxLength(500)
+            .IsRequired(false);
+
         
         builder.HasMany(m => m.Groups)
             .WithOne(g => g.Mentor)

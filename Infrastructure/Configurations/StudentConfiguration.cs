@@ -13,6 +13,10 @@ public class StudentConfiguration:IEntityTypeConfiguration<Student>
         builder.Property(s => s.Phone)
             .HasMaxLength(20);
 
+            builder.Property(s => s.PhotoUrl)
+            .HasMaxLength(500)
+            .IsRequired(false);
+
         builder.Property(s => s.AboutMe)
             .HasMaxLength(1000);
 

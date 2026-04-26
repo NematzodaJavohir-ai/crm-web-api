@@ -3,6 +3,7 @@ public class Student
 {
     public int Id { get; set; }
     public int UserId { get; set; }
+    public string? PhotoUrl { get; set; }
     public string? Phone { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public string? AboutMe { get; set; }
