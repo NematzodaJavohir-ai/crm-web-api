@@ -1,16 +1,36 @@
-using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace Application.Dtos.MentorDto;
 
 public class MentorCreateDto
 {
-   public string FullName { get; set; } = null!;
+    [Required(ErrorMessage = "Full name is required")]
+    [StringLength(100, MinimumLength = 3, ErrorMessage = "Full name must be between 3 and 100 characters")]
+    public string FullName { get; set; } = null!;
+
+    [Required(ErrorMessage = "Email is required")]
+    [EmailAddress(ErrorMessage = "Invalid email format")]
     public string Email { get; set; } = null!;
+
+    [Required(ErrorMessage = "Password is required")]
+    [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters long")]
     public string Password { get; set; } = null!;
+
+    [Phone(ErrorMessage = "Invalid phone number format")]
     public string? Phone { get; set; }
+
+    [Required(ErrorMessage = "Specialization is required")]
     public string? Specialization { get; set; }
+
+    [Range(0, 50, ErrorMessage = "Experience years must be between 0 and 50")]
     public int? ExperienceYears { get; set; }
+
+    [MaxLength(2000, ErrorMessage = "Bio cannot exceed 2000 characters")]
     public string? Bio { get; set; }
+
+    [Url(ErrorMessage = "Invalid LinkedIn URL")]
     public string? LinkedInUrl { get; set; }
+
+    [Url(ErrorMessage = "Invalid GitHub URL")]
     public string? GithubUrl { get; set; }
 }

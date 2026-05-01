@@ -1,11 +1,22 @@
-
+# Сборка и временные папки (bin/obj)
 [Bb]in/
 [Oo]bj/
 
-
+# Настройки IDE (Visual Studio и VS Code)
 .vs/
 .vscode/
 *.user
+*.suo
+*.userosscache
+*.sln.docstates
 
+# Конфигурационные файлы (Чтобы не "палить" пароли от базы на GitHub)
 appsettings.json
 appsettings.Development.json
+
+# Логи и временные файлы
+*.log
+.DS_Store
+
+# Результаты тестов
+TestResults/

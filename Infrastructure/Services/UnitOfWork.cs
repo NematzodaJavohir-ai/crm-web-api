@@ -1,7 +1,6 @@
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Infrastructure.Data;
-
 namespace Infrastructure;
 
 public class UnitOfWork(
@@ -9,12 +8,14 @@ public class UnitOfWork(
     IGroupRepository groups,
     IStudentRepository students,
     IMentorRepository mentors,
+    ICourseRepository courses,
     ILessonRepository lessons,
     IAttendanceRepository attendances,
     IWeekResultRepository weekResults,
     IGroupStudentRepository groupStudents) : IUnitOfWork
 {
     public IGroupRepository Groups => groups;
+    public ICourseRepository Courses => courses ;
     public IStudentRepository Students => students;
     public IMentorRepository Mentors => mentors;
     public ILessonRepository Lessons => lessons;
