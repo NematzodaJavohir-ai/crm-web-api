@@ -4,10 +4,10 @@ namespace Application.Dtos.GroupStudentDto;
 
 public class GroupStudentResponseDto
 {
-   public Guid Id { get; set; }
+   public int Id { get; set; }
     public int GroupId { get; set; }
     public string GroupName { get; set; } = null!;
-    public Guid StudentId { get; set; }
+    public int StudentId { get; set; }
     public string StudentName { get; set; } = null!;
     public string StudentEmail { get; set; } = null!;
     public DateTime JoinedAt { get; set; }

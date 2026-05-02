@@ -1,11 +1,10 @@
 using System;
-
 namespace Application.Dtos.WeeklyResultDto;
 
 public class WeeklyResultResponseDto
 {
-      public Guid Id { get; set; }
-    public Guid StudentId { get; set; }
+      public int Id { get; set; }
+    public int StudentId { get; set; }
     public string StudentName { get; set; } = null!;
     public int GroupId { get; set; }
     public string GroupName { get; set; } = null!;

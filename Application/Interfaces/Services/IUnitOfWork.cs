@@ -8,6 +8,7 @@ public interface IUnitOfWork
     IGroupRepository Groups { get; }
     IStudentRepository Students { get; }
     IMentorRepository Mentors { get; }
+    ICourseRepository Courses { get; }
     ILessonRepository Lessons { get; }
     IAttendanceRepository Attendances { get; }
     IWeekResultRepository WeekResults { get; }

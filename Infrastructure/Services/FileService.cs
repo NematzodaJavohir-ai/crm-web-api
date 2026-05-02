@@ -1,10 +1,15 @@
 using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Application.Interfaces.Services;
 using Application.Results;
 using Domain.Enums;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+
 namespace Infrastructure.Services;
+
 public class FileService : IFileService
 {
     private readonly IWebHostEnvironment _env;
@@ -30,12 +35,13 @@ public class FileService : IFileService
             if (file.Length > 5 * 1024 * 1024)
                 return Result<string?>.Fail("File too large (max 5MB)", ErrorType.Validation);
 
-            var uploadsFolder = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads", folderName);
+            var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var uploadsFolder = Path.Combine(webRoot, "uploads", folderName);
 
             if (!Directory.Exists(uploadsFolder))
                 Directory.CreateDirectory(uploadsFolder);
 
-            var fileName = Guid.NewGuid() + extension;
+            var fileName = Guid.NewGuid().ToString() + extension;
             var filePath = Path.Combine(uploadsFolder, fileName);
 
             using (var stream = new FileStream(filePath, FileMode.Create))
@@ -53,18 +59,26 @@ public class FileService : IFileService
         }
     }
 
-    public Task<Result<bool>> DeleteAsync(string filePath)
+    public async Task<Result<bool>> DeleteAsync(string filePath)
     {
-        if (string.IsNullOrWhiteSpace(filePath))
-            return Task.FromResult(Result<bool>.Fail("Invalid file path"));
+        try
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                return Result<bool>.Fail("Invalid file path", ErrorType.Validation);
 
-        var fullPath = Path.Combine(_env.WebRootPath, filePath.TrimStart('/'));
+            var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var fullPath = Path.Combine(webRoot, filePath.TrimStart('/'));
 
-        if (!File.Exists(fullPath))
-            return Task.FromResult(Result<bool>.Fail("File not found"));
+            if (!File.Exists(fullPath))
+                return Result<bool>.Fail("File not found", ErrorType.NotFound);
 
-        File.Delete(fullPath);
+            File.Delete(fullPath);
 
-        return Task.FromResult(Result<bool>.Ok(true));
+            return Result<bool>.Ok(true);
+        }
+        catch (Exception ex)
+        {
+            return Result<bool>.Fail($"Error: {ex.Message}", ErrorType.Unknown);
+        }
     }
 }

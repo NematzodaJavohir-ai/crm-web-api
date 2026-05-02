@@ -12,7 +12,6 @@
     <Folder Include="Dtos\AttendanceDto\" />
     <Folder Include="Dtos\CourseDto\" />
     <Folder Include="Dtos\GroupDto\" />
-    <Folder Include="Dtos\GroupStudentDto\" />
     <Folder Include="Dtos\LessonDto\" />
     <Folder Include="Dtos\MentorDto\" />
     <Folder Include="Dtos\NotificationDto\" />

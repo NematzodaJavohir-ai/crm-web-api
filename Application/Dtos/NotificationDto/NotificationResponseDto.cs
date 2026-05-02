@@ -4,7 +4,7 @@ namespace Application.Dtos.NotificationDto;
 
 public class NotificationResponseDto
 {
-    public Guid Id { get; set; }
+    public int Id { get; set; }
     public string Title { get; set; } = null!;
     public string Message { get; set; } = null!;
     public string Type { get; set; } = null!;
