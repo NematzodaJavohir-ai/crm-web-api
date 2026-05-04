@@ -1,34 +1,35 @@
-using Application.Exeptions;
 using Application.Results;
 using Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace WebApi.Controllers;
 
 [ApiController]
 public abstract class BaseController : ControllerBase
 {
-    protected IActionResult HandleResult<T>(Result<T> result)
+    protected int GetUserId()
+        => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+    protected string GetUserRole()
+        => User.FindFirstValue(ClaimTypes.Role)!;
+
+    protected IActionResult HandleResult<T>(Result<T> result, int successStatusCode = 200)
     {
-        if (result == null) return StatusCode(500, "Result is null");
+        if (result is null)
+            return StatusCode(500, "Result is null");
 
         if (result.IsSuccess)
-        {
-        
-            if (result.Data is null || (result.Data is bool b && b == true)) 
-                return Ok(result); 
+            return StatusCode(successStatusCode, result.Data);
 
-            return Ok(result);
-        }
-
-        
         return result.ErrorType switch
         {
-            ErrorType.NotFound => NotFound(result),
-            ErrorType.Conflict => Conflict(result), 
-            ErrorType.Validation => BadRequest(result),
-            ErrorType.Unauthorized => Unauthorized(result),
-            _ => StatusCode(500, result)
+            ErrorType.NotFound     => NotFound(result.Error),
+            ErrorType.Conflict     => Conflict(result.Error),
+            ErrorType.Validation   => BadRequest(result.Error),
+            ErrorType.Unauthorized => Unauthorized(result.Error),
+            ErrorType.Forbidden    => StatusCode(403, result.Error),
+            _                      => StatusCode(500, result.Error)
         };
     }
 }
