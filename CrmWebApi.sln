@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "Domain\Domain.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Infrastructure\Infrastructure.csproj", "{8F382B3B-54B2-46CB-B0DB-02612F6599A3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorApp", "BlazorApp\BlazorApp.csproj", "{79BE4203-0BB4-42C4-BC4D-34EC7742D491}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,18 @@ Global
 		{8F382B3B-54B2-46CB-B0DB-02612F6599A3}.Release|x64.Build.0 = Release|Any CPU
 		{8F382B3B-54B2-46CB-B0DB-02612F6599A3}.Release|x86.ActiveCfg = Release|Any CPU
 		{8F382B3B-54B2-46CB-B0DB-02612F6599A3}.Release|x86.Build.0 = Release|Any CPU
+		{79BE4203-0BB4-42C4-BC4D-34EC7742D491}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79BE4203-0BB4-42C4-BC4D-34EC7742D491}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79BE4203-0BB4-42C4-BC4D-34EC7742D491}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{79BE4203-0BB4-42C4-BC4D-34EC7742D491}.Debug|x64.Build.0 = Debug|Any CPU
+		{79BE4203-0BB4-42C4-BC4D-34EC7742D491}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{79BE4203-0BB4-42C4-BC4D-34EC7742D491}.Debug|x86.Build.0 = Debug|Any CPU
+		{79BE4203-0BB4-42C4-BC4D-34EC7742D491}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79BE4203-0BB4-42C4-BC4D-34EC7742D491}.Release|Any CPU.Build.0 = Release|Any CPU
+		{79BE4203-0BB4-42C4-BC4D-34EC7742D491}.Release|x64.ActiveCfg = Release|Any CPU
+		{79BE4203-0BB4-42C4-BC4D-34EC7742D491}.Release|x64.Build.0 = Release|Any CPU
+		{79BE4203-0BB4-42C4-BC4D-34EC7742D491}.Release|x86.ActiveCfg = Release|Any CPU
+		{79BE4203-0BB4-42C4-BC4D-34EC7742D491}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

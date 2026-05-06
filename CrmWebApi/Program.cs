@@ -1,6 +1,7 @@
 using System.Text;
 using Application.Email;
 using Application.Interfaces.Repositories;
+using Application.Interfaces.Service;
 using Application.Interfaces.Services;
 using Application.Services;
 using Hangfire;
@@ -19,6 +20,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using OnlineCourses.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +32,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer(); 
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddMemoryCache();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<DataContext>(op => op.UseNpgsql(connectionString));
@@ -82,6 +86,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // MassTransit RabbitMQ
+/*
 builder.Services.AddMassTransit(x =>
 {
     x.AddConsumer<NotificationConsumer>();
@@ -100,6 +105,7 @@ builder.Services.AddMassTransit(x =>
         });
     });
 });
+*/
 
 // Hangfire
 builder.Services.AddHangfire(config => config
@@ -111,8 +117,8 @@ builder.Services.AddHangfireServer();
 builder.Services.AddScoped<WeeklyReportJob>();
 
 // DI Registration
-builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+//builder.Services.AddScoped<INotificationService, NotificationService>();
+//builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -132,18 +138,26 @@ builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddScoped<IMentorRepository, MentorRepository>();
 builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+builder.Services.AddScoped<ICacheService,CacheService>();
 builder.Services.AddScoped<IWeekResultRepository, WeekResultRepository>();
 builder.Services.AddScoped<IWeekResultService, WeekResultService>();
 builder.Services.AddScoped<IGroupStudentRepository, GroupStudentRepository>();
 builder.Services.AddScoped<IGroupStudentService, GroupStudentsService>();
 builder.Services.AddScoped<IVerificationCodeRepository, VerificationCodeRepository>();
 
-// CORS
+// ========== CORS ==========
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:5173", "http://localhost:4200")
+        policy.WithOrigins(
+                "http://localhost:3000",    // React
+                "http://localhost:5173",    // Vite
+                "http://localhost:4200",    // Angular
+                "http://localhost:5053",    // ✅ Blazor (ДОБАВЛЕНО!)
+                "http://localhost:5000",    // Blazor альтернативный
+                "http://localhost:7151"     // HTTPS Blazor
+              )
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -184,11 +198,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Middleware order 
+// ========== ПРАВИЛЬНЫЙ ПОРЯДОК MIDDLEWARE ==========
 app.UseMiddleware<GlobalExceptionMiddleware>();
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();  ← закомментировано (вы используете HTTP)
 app.UseStaticFiles();
-app.UseCors("AllowFrontend"); 
+app.UseRouting();                       
+app.UseCors("AllowFrontend");            
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

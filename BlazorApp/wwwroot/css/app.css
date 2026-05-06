@@ -1,0 +1,243 @@
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --sidebar-w: 260px;
+    --topbar-h: 60px;
+    --accent: #6C63FF;
+    --accent-light: #EEEEFF;
+    --accent-dark: #4B44CC;
+    --bg: #F5F6FA;
+    --surface: #FFFFFF;
+    --surface-2: #F0F1F8;
+    --border: #E4E5F0;
+    --text-1: #1A1B2E;
+    --text-2: #5A5B6E;
+    --text-3: #9A9BB0;
+    --success: #22C55E;
+    --success-light: #DCFCE7;
+    --warning: #F59E0B;
+    --warning-light: #FEF3C7;
+    --danger: #EF4444;
+    --danger-light: #FEE2E2;
+    --info: #3B82F6;
+    --info-light: #DBEAFE;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+html, body {
+    height: 100%;
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text-1);
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+a:hover {
+    color: var(--accent-dark);
+}
+
+/* ── Blazor loading ── */
+.loading-progress {
+    position: relative;
+    display: block;
+    width: 6rem;
+    height: 6rem;
+    margin: 30vh auto 1rem;
+}
+
+.loading-progress circle {
+    fill: none;
+    stroke: #E4E5F0;
+    stroke-width: 0.5rem;
+    transform-origin: 50% 50%;
+    transform: rotate(-90deg);
+}
+
+.loading-progress circle:last-child {
+    stroke: #6C63FF;
+    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.6), 500%;
+    transition: stroke-dasharray 0.05s ease-in-out;
+}
+
+.loading-progress-text {
+    position: absolute;
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-1);
+    inset: calc(30vh + 2.2rem) 0 auto 0;
+    font-size: 0.9rem;
+}
+
+.loading-progress-text:after {
+    content: var(--blazor-load-percentage-text, "Loading...");
+}
+
+/* ── Blazor error ── */
+#blazor-error-ui {
+    background: var(--surface);
+    color: var(--text-1);
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: var(--shadow-md);
+    display: none;
+    padding: 1rem 2rem;
+    position: fixed;
+    min-width: 300px;
+    z-index: 9999;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+    color: var(--text-3);
+}
+
+/* ── Form ── */
+.form-control:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.12);
+    outline: none;
+}
+
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid var(--success);
+}
+
+.invalid {
+    outline: 1px solid var(--danger);
+}
+
+.validation-message {
+    color: var(--danger);
+    font-size: 0.8rem;
+    margin-top: 4px;
+}
+
+code {
+    color: #d946ef;
+    background: #fdf4ff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-3);
+}
+/*Sidebar Important--------------------------------------------------------------------------*/
+.sidebar .nav-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 11px 14px !important;
+    margin: 2px 10px !important;
+    border-radius: 12px !important;
+    color: #5A5B6E !important;
+    text-decoration: none !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    white-space: nowrap !important;
+    width: calc(100% - 20px) !important;
+    box-sizing: border-box !important;
+    transition: background 0.15s, color 0.15s !important;
+}
+
+.sidebar .nav-item:hover {
+    background: #F0F1F8 !important;
+    color: #1A1B2E !important;
+}
+
+.sidebar .nav-item.active {
+    background: #EEEEFF !important;
+    color: #6C63FF !important;
+    font-weight: 500 !important;
+}
+
+.sidebar .nav-icon {
+    font-size: 17px !important;
+    width: 22px !important;
+    min-width: 22px !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.sidebar .nav-text {
+    flex: 1 !important;
+    display: block !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.sidebar .nav-count {
+    display: block !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    background: #EEEEFF !important;
+    color: #6C63FF !important;
+    padding: 2px 8px !important;
+    border-radius: 20px !important;
+    flex-shrink: 0 !important;
+}
+
+.sidebar .nav-section {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+}
+
+.sidebar .sidebar-body {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.sidebar.collapsed .nav-item {
+    justify-content: center !important;
+    padding: 11px 0 !important;
+    gap: 0 !important;
+}
+
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .nav-count {
+    display: none !important;
+}

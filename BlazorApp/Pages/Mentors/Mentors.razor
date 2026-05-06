@@ -1,0 +1,780 @@
+﻿@page "/mentors"
+@using BlazorApp.ApiServices.Interfaces
+@using BlazorApp.DTOs.MentorDto
+@inject NavigationManager Navigation
+@inject IMentorApiService MentorService
+
+<div class="students-page">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1 class="page-title">Mentors</h1>
+            <span class="page-subtitle">Manage all mentors in your platform</span>
+        </div>
+        <button class="btn-create" @onclick="OpenCreateModal">
+            <i class="bi bi-plus-lg"></i>
+            Add Mentor
+        </button>
+    </div>
+
+    <div class="toolbar">
+        <div class="search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" placeholder="Search mentors..."
+                   @bind="searchQuery" @bind:event="oninput" />
+        </div>
+        <div class="filter-wrap">
+            <select @bind="filterActive">
+                <option value="">All Status</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+        </div>
+        <span class="total-count">@FilteredMentors.Count() mentors</span>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-wrap">
+            <div class="spinner"></div>
+            <span>Loading mentors...</span>
+        </div>
+    }
+    else if (!FilteredMentors.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-person-badge"></i>
+            <h3>No mentors found</h3>
+            <p>Try adjusting your search or add a new mentor</p>
+            <button class="btn-create" @onclick="OpenCreateModal">
+                <i class="bi bi-plus-lg"></i> Add First Mentor
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Mentor</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Specialization</th>
+                        <th>Experience</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var mentor in FilteredMentors)
+                    {
+                        var index = FilteredMentors.ToList().IndexOf(mentor) + 1;
+                        <tr>
+                            <td class="td-num">@index</td>
+                            <td>
+                                <div class="student-cell">
+                                    <div class="student-avatar">
+                                        @GetInitials(mentor.FullName)
+                                    </div>
+                                    <div class="student-info">
+                                        <span class="student-name">@mentor.FullName</span>
+                                        @if (!string.IsNullOrEmpty(mentor.Bio))
+                                        {
+                                            <span class="student-bio">@(mentor.Bio.Length > 30 ? mentor.Bio.Substring(0, 30) + "..." : mentor.Bio)</span>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="td-email">@mentor.Email</td>
+                            <td>@(mentor.Phone ?? "—")</td>
+                            <td>@(mentor.Specialization ?? "—")</td>
+                            <td>@(mentor.ExperienceYears?.ToString() ?? "—") yrs</td>
+                            <td>
+                                @if (mentor.IsActive)
+                                {
+                                    <span class="status-badge active">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="status-badge inactive">Inactive</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="action-btns">
+                                    <button class="btn-icon btn-view" title="View" @onclick="() => OpenViewModal(mentor)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn-icon btn-edit" title="Edit" @onclick="() => OpenEditModal(mentor)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn-icon btn-delete" title="Delete" @onclick="() => OpenDeleteConfirm(mentor)">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@* CREATE MODAL *@
+@if (showCreateModal)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon create-icon">
+                    <i class="bi bi-person-plus-fill"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Create New Mentor</h2>
+                    <p class="premium-modal-subtitle">Fill in the information below</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="premium-form-grid">
+                    <div class="premium-form-group">
+                        <label>First Name <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-person"></i>
+                            <input type="text" @bind="createDto.FirstName" placeholder="John" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Last Name <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-person"></i>
+                            <input type="text" @bind="createDto.LastName" placeholder="Doe" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Email <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-envelope"></i>
+                            <input type="email" @bind="createDto.Email" placeholder="john@example.com" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Password <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-key"></i>
+                            <input type="password" @bind="createDto.Password" placeholder="••••••••" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Phone</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-telephone"></i>
+                            <input type="text" @bind="createDto.Phone" placeholder="+992 XX XXX XXXX" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Experience Years</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-briefcase"></i>
+                            <input type="number" @bind="createDto.ExperienceYears" placeholder="5" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Specialization <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-mortarboard"></i>
+                            <input type="text" @bind="createDto.Specialization" placeholder="e.g., Full Stack Developer" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Bio</label>
+                        <div class="premium-input-wrapper textarea">
+                            <i class="bi bi-chat"></i>
+                            <textarea @bind="createDto.Bio" placeholder="Short bio about the mentor..." rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>LinkedIn URL</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-linkedin"></i>
+                            <input type="url" @bind="createDto.LinkedInUrl" placeholder="https://linkedin.com/in/username" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>GitHub URL</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-github"></i>
+                            <input type="url" @bind="createDto.GithubUrl" placeholder="https://github.com/username" />
+                        </div>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="premium-alert error">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        @errorMessage
+                    </div>
+                }
+
+                <div class="premium-modal-footer">
+                    <button type="button" class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="premium-btn-primary" @onclick="CreateMentor" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="premium-spinner"></span>
+                            <span>Creating...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-lg"></i>
+                            <span>Create Mentor</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@* VIEW MODAL *@
+@if (showViewModal && selectedMentor != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal premium-modal-view" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon view-icon">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Mentor Profile</h2>
+                    <p class="premium-modal-subtitle">View mentor details</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="profile-header">
+                    <div class="profile-avatar-large">
+                        @GetInitials(selectedMentor.FullName)
+                    </div>
+                    <div class="profile-info-large">
+                        <h3 class="profile-name">@selectedMentor.FullName</h3>
+                        <span class="profile-email">@selectedMentor.Email</span>
+                        <div class="profile-status-toggle">
+                            <span class="status-label">Status:</span>
+                            <div class="toggle-switch" @onclick="ToggleStatus">
+                                <input type="checkbox" id="statusToggle" checked="@selectedMentor.IsActive" disabled="@isSaving" />
+                                <label for="statusToggle" class="toggle-label">
+                                    <span class="toggle-button"></span>
+                                </label>
+                                <span class="status-text @(selectedMentor.IsActive ? "active-text" : "inactive-text")">
+                                    @(selectedMentor.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="details-grid">
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="bi bi-telephone-fill"></i>
+                        </div>
+                        <div class="detail-content">
+                            <label>Phone Number</label>
+                            <p>@(selectedMentor.Phone ?? "Not specified")</p>
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="bi bi-briefcase-fill"></i>
+                        </div>
+                        <div class="detail-content">
+                            <label>Experience</label>
+                            <p>@(selectedMentor.ExperienceYears?.ToString() ?? "0") years</p>
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </div>
+                        <div class="detail-content">
+                            <label>Specialization</label>
+                            <p>@(selectedMentor.Specialization ?? "Not specified")</p>
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="bi bi-calendar3-fill"></i>
+                        </div>
+                        <div class="detail-content">
+                            <label>Hire Date</label>
+                            <p>@selectedMentor.HireDate.ToString("dd MMM yyyy")</p>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(selectedMentor.LinkedInUrl))
+                    {
+                        <div class="detail-card clickable" @onclick="() => OpenLink(selectedMentor.LinkedInUrl)">
+                            <div class="detail-icon linkedin">
+                                <i class="bi bi-linkedin"></i>
+                            </div>
+                            <div class="detail-content">
+                                <label>LinkedIn Profile</label>
+                                <p>View Profile <i class="bi bi-box-arrow-up-right"></i></p>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(selectedMentor.GithubUrl))
+                    {
+                        <div class="detail-card clickable" @onclick="() => OpenLink(selectedMentor.GithubUrl)">
+                            <div class="detail-icon github">
+                                <i class="bi bi-github"></i>
+                            </div>
+                            <div class="detail-content">
+                                <label>GitHub Profile</label>
+                                <p>View Profile <i class="bi bi-box-arrow-up-right"></i></p>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(selectedMentor.Bio))
+                    {
+                        <div class="detail-card full-width">
+                            <div class="detail-icon">
+                                <i class="bi bi-chat-quote-fill"></i>
+                            </div>
+                            <div class="detail-content">
+                                <label>Bio</label>
+                                <p class="bio-text">@selectedMentor.Bio</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="premium-modal-footer">
+                <button class="premium-btn-secondary" @onclick="CloseModals">Close</button>
+                <button class="premium-btn-edit" @onclick="(() => { CloseModals(); OpenEditModal(selectedMentor); })">
+                    <i class="bi bi-pencil"></i> Edit Mentor
+                </button>
+            </div>
+        </div>
+    </div>
+}
+@* DELETE MODAL *@
+@if (showDeleteConfirm && selectedMentor != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal premium-modal-sm" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon delete-icon">
+                    <i class="bi bi-trash3-fill"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Delete Mentor</h2>
+                    <p class="premium-modal-subtitle">This action cannot be undone</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body text-center">
+                <div class="delete-warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <p>Are you sure you want to delete <strong>@selectedMentor.FullName</strong>?</p>
+                    <small>All related data will be permanently removed.</small>
+                </div>
+            </div>
+            <div class="premium-modal-footer">
+                <button class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button class="premium-btn-danger" @onclick="DeleteMentor" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="premium-spinner"></span>
+                        <span>Deleting...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-trash3"></i>
+                        <span>Delete Permanently</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* EDIT MODAL *@
+@if (showEditModal && selectedMentor != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon edit-icon">
+                    <i class="bi bi-pencil-square"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Edit Mentor</h2>
+                    <p class="premium-modal-subtitle">Update mentor information</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="premium-form-grid">
+                    <div class="premium-form-group full-width">
+                        <label>Full Name</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-person"></i>
+                            <input type="text" @bind="selectedMentor.FullName" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Email</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-envelope"></i>
+                            <input type="email" @bind="selectedMentor.Email" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Phone</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-telephone"></i>
+                            <input type="text" @bind="selectedMentor.Phone" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Experience Years</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-briefcase"></i>
+                            <input type="number" @bind="selectedMentor.ExperienceYears" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Specialization</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-mortarboard"></i>
+                            <input type="text" @bind="selectedMentor.Specialization" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Bio</label>
+                        <div class="premium-input-wrapper textarea">
+                            <i class="bi bi-chat"></i>
+                            <textarea @bind="selectedMentor.Bio" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>LinkedIn URL</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-linkedin"></i>
+                            <input type="url" @bind="selectedMentor.LinkedInUrl" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>GitHub URL</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-github"></i>
+                            <input type="url" @bind="selectedMentor.GithubUrl" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Status</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-toggle-on"></i>
+                            <select @bind="selectedMentor.IsActive">
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="premium-modal-footer">
+                    <button type="button" class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="premium-btn-primary" @onclick="UpdateMentor" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="premium-spinner"></span>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-save"></i>
+                            <span>Save Changes</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private async Task ToggleStatus()
+{
+    if (selectedMentor == null) return;
+
+    isSaving = true;
+    StateHasChanged();
+
+    try
+    {
+        var newStatus = !selectedMentor.IsActive;
+        var success = await MentorService.SetActiveAsync(selectedMentor.Id, newStatus);
+        
+        if (success)
+        {
+            selectedMentor.IsActive = newStatus;
+            await LoadMentors();
+            // Показываем уведомление об успехе (опционально)
+            errorMessage = "";
+        }
+        else
+        {
+            errorMessage = "Failed to update status. Please try again.";
+        }
+    }
+    catch (Exception ex)
+    {
+        errorMessage = ex.Message;
+    }
+    finally
+    {
+        isSaving = false;
+        StateHasChanged();
+    }
+}
+
+    private void OpenLink(string url)
+{
+    if (!string.IsNullOrEmpty(url))
+    {
+        Navigation.NavigateTo(url, forceLoad: true);
+    }
+}
+    private List<MentorResponseDto> mentors = new();
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string searchQuery = "";
+    private string filterActive = "";
+    private string errorMessage = "";
+
+    private bool showCreateModal = false;
+    private bool showViewModal = false;
+    private bool showEditModal = false;
+    private bool showDeleteConfirm = false;
+
+    private MentorCreateDto createDto = new();
+    private MentorResponseDto? selectedMentor;
+
+    private IEnumerable<MentorResponseDto> FilteredMentors =>
+        mentors.Where(m =>
+            (string.IsNullOrEmpty(searchQuery) ||
+             m.FullName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+             m.Email.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(filterActive) || 
+             (filterActive == "true" && m.IsActive) ||
+             (filterActive == "false" && !m.IsActive)));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMentors();
+    }
+
+    private async Task LoadMentors()
+    {
+        isLoading = true;
+        try
+        {
+            mentors = await MentorService.GetAllAsync() ?? new();
+            Console.WriteLine($"Loaded {mentors.Count} mentors");
+            foreach (var m in mentors)
+            {
+                Console.WriteLine($"Mentor: {m.FullName}, IsActive: {m.IsActive}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading mentors: {ex.Message}");
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OpenCreateModal()
+    {
+        createDto = new();
+        errorMessage = "";
+        showCreateModal = true;
+    }
+
+    private void OpenViewModal(MentorResponseDto mentor)
+    {
+        selectedMentor = mentor;
+        showViewModal = true;
+    }
+
+    private void OpenEditModal(MentorResponseDto mentor)
+    {
+        selectedMentor = mentor;
+        showEditModal = true;
+    }
+
+    private void OpenDeleteConfirm(MentorResponseDto mentor)
+    {
+        selectedMentor = mentor;
+        showDeleteConfirm = true;
+    }
+
+    private void CloseModals()
+    {
+        showCreateModal = false;
+        showViewModal = false;
+        showEditModal = false;
+        showDeleteConfirm = false;
+        selectedMentor = null;
+        errorMessage = "";
+        StateHasChanged();
+    }
+
+    private async Task CreateMentor()
+    {
+        isSaving = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var result = await MentorService.CreateAsync(createDto);
+            
+            if (result != null)
+            {
+                await LoadMentors();
+                CloseModals();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            StateHasChanged();
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateMentor()
+    {
+        if (selectedMentor == null) return;
+
+        isSaving = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var updateDto = new MentorUpdateDto
+            {
+                FullName = selectedMentor.FullName,
+                Email = selectedMentor.Email,
+                Phone = selectedMentor.Phone,
+                Specialization = selectedMentor.Specialization,
+                ExperienceYears = selectedMentor.ExperienceYears,
+                Bio = selectedMentor.Bio,
+                LinkedInUrl = selectedMentor.LinkedInUrl,
+                GithubUrl = selectedMentor.GithubUrl,
+                IsActive = selectedMentor.IsActive
+            };
+
+            var result = await MentorService.UpdateAsync(selectedMentor.Id, updateDto);
+            
+            if (result != null)
+            {
+                await LoadMentors();
+                CloseModals();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            StateHasChanged();
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteMentor()
+    {
+        if (selectedMentor == null) return;
+
+        isSaving = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var success = await MentorService.DeleteAsync(selectedMentor.Id);
+
+            if (success)
+            {
+                await LoadMentors();
+                CloseModals();
+            }
+            else
+            {
+                errorMessage = "Failed to delete mentor. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetInitials(string fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            return "?";
+
+        var parts = fullName
+            .Trim()
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (parts.Length == 0)
+            return "?";
+
+        if (parts.Length == 1)
+            return parts[0].Length > 0
+                ? parts[0][0].ToString().ToUpper()
+                : "?";
+
+        return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+    }
+}

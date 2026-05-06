@@ -8,6 +8,7 @@ public interface IMentorService
     // ───── Admin ─────
     Task<Result<MentorResponseDto>> CreateAsync(MentorCreateDto dto, CancellationToken ct = default);
     Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default);
+    Task<Result<MentorResponseDto>>UpdateAsync(int id, MentorUpdateDto dto, CancellationToken ct);
     Task<Result<IEnumerable<MentorResponseDto>>> GetAllAsync(CancellationToken ct = default);
     Task<Result<IEnumerable<MentorResponseDto>>> GetAllActiveAsync(CancellationToken ct = default);
     Task<Result<MentorResponseDto>> SetActiveAsync(int id, bool isActive, CancellationToken ct = default);

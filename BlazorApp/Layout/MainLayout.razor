@@ -1,0 +1,53 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager Nav
+
+<div class="app-shell">
+    <NavMenu />
+    <div class="main-wrapper">
+        <header class="topbar">
+            <div class="topbar-left">
+                <div class="breadcrumb">
+                    <span class="breadcrumb-root">Platform</span>
+                    <span class="breadcrumb-sep">/</span>
+                    <span class="breadcrumb-current">@GetPageTitle()</span>
+                </div>
+            </div>
+            <div class="topbar-right">
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" placeholder="Quick search..." />
+                    <kbd>/</kbd>
+                </div>
+                <button class="icon-btn" title="Notifications">
+                    <i class="bi bi-bell"></i>
+                    <span class="notif-badge">3</span>
+                </button>
+                <div class="avatar-wrap">
+                    <div class="avatar">A</div>
+                    <div class="avatar-info">
+                        <span class="avatar-name">Admin</span>
+                        <span class="avatar-role">Super Admin</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <main class="page-content">
+            @Body
+        </main>
+    </div>
+</div>
+
+@code {
+    private string GetPageTitle()
+    {
+        var uri = Nav.Uri;
+        if (uri.Contains("students")) return "Students";
+        if (uri.Contains("mentors")) return "Mentors";
+        if (uri.Contains("groups")) return "Groups";
+        if (uri.Contains("courses")) return "Courses";
+        if (uri.Contains("lessons")) return "Lessons";
+        if (uri.Contains("attendance")) return "Attendance";
+        if (uri.Contains("week-results")) return "Week Results";
+        return "Dashboard";
+    }
+}

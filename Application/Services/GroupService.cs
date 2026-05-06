@@ -223,7 +223,7 @@ public class GroupService(IUnitOfWork uow) : IGroupService
         {
             Id = group.Mentor.Id,
             UserId = group.Mentor.UserId,
-           FullName = $"{group.Mentor.User.FirstName} {group.Mentor.User.LastName}",
+            FullName = $"{group.Mentor.User.FirstName} {group.Mentor.User.LastName}",
             Email = group.Mentor.User.Email,
             Specialization = group.Mentor.Specialization,
             Phone = group.Mentor.Phone

@@ -1,0 +1,77 @@
+﻿@inject NavigationManager Nav
+
+<aside class="sidebar @(IsCollapsed ? "collapsed" : "")">
+    <div class="sidebar-header">
+        <div class="logo-wrap">
+            <div class="logo-icon">
+                <i class="bi bi-layers-fill"></i>
+            </div>
+            <div class="logo-text">
+                <span class="logo-name">CRM</span>
+                <span class="logo-sub">PRO ADMIN</span>
+            </div>
+        </div>
+        <button class="collapse-btn" @onclick="ToggleSidebar">
+            <i class="bi @(IsCollapsed ? "bi-chevron-right" : "bi-chevron-left")"></i>
+        </button>
+    </div>
+
+    <div class="sidebar-body">
+        <div class="nav-section">
+            <span class="nav-label">MAIN DASHBOARD</span>
+            <NavLink class="nav-item" href="/" Match="NavLinkMatch.All">
+                <i class="bi bi-grid-1x2-fill nav-icon"></i>
+                <span class="nav-text">Overview</span>
+            </NavLink>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-label">ACADEMY</span>
+            <NavLink class="nav-item" href="/students">
+                <i class="bi bi-people-fill nav-icon"></i>
+                <span class="nav-text">Students</span>   
+            </NavLink>
+            <NavLink class="nav-item" href="/mentors">
+                <i class="bi bi-person-workspace nav-icon"></i>
+                <span class="nav-text">Mentors</span>
+            </NavLink>
+            <NavLink class="nav-item" href="/groups">
+                <i class="bi bi-diagram-3-fill nav-icon"></i>
+                <span class="nav-text">Groups</span>
+            </NavLink>
+            <NavLink class="nav-item" href="/courses">
+                <i class="bi bi-book-fill nav-icon"></i>
+                <span class="nav-text">Courses</span>
+            </NavLink>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-label">JOURNAL</span>
+            <NavLink class="nav-item" href="/lessons">
+                <i class="bi bi-calendar3-week-fill nav-icon"></i>
+                <span class="nav-text">Lessons</span>
+            </NavLink>
+            <NavLink class="nav-item" href="/attendance">
+                <i class="bi bi-check2-square nav-icon"></i>
+                <span class="nav-text">Attendance</span>
+            </NavLink>
+            <NavLink class="nav-item" href="/week-results">
+                <i class="bi bi-bar-chart-fill nav-icon"></i>
+                <span class="nav-text">Week Results</span>
+            </NavLink>
+        </div>
+    </div>
+
+    <div class="sidebar-footer">
+        <div class="footer-divider"></div>
+        <NavLink class="nav-item signout" href="/logout">
+            <i class="bi bi-box-arrow-left nav-icon"></i>
+            <span class="nav-text">Sign Out</span>
+        </NavLink>
+    </div>
+</aside>
+
+@code {
+    private bool IsCollapsed = false;
+    private void ToggleSidebar() => IsCollapsed = !IsCollapsed;
+}

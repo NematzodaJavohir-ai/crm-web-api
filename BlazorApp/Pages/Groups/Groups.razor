@@ -1,0 +1,650 @@
+﻿@page "/groups"
+@using BlazorApp.ApiServices.Interfaces
+@using BlazorApp.DTOs.GroupDto
+@using BlazorApp.DTOs.CourseDto
+@using BlazorApp.DTOs.MentorDto
+@inject IGroupApiService GroupService
+
+<div class="students-page">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1 class="page-title">Groups</h1>
+            <span class="page-subtitle">Manage all groups in your platform</span>
+        </div>
+        <button class="btn-create" @onclick="OpenCreateModal">
+            <i class="bi bi-plus-lg"></i>
+            Add Group
+        </button>
+    </div>
+
+    <div class="toolbar">
+        <div class="search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" placeholder="Search groups..."
+                   @bind="searchQuery" @bind:event="oninput" />
+        </div>
+        <div class="filter-wrap">
+            <select @bind="filterStatus">
+                <option value="">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
+        </div>
+        <span class="total-count">@FilteredGroups.Count() groups</span>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-wrap">
+            <div class="spinner"></div>
+            <span>Loading groups...</span>
+        </div>
+    }
+    else if (!FilteredGroups.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-collection-play-fill"></i>
+            <h3>No groups found</h3>
+            <p>Try adjusting your search or add a new group</p>
+            <button class="btn-create" @onclick="OpenCreateModal">
+                <i class="bi bi-plus-lg"></i> Add First Group
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Group</th>
+                        <th>Course</th>
+                        <th>Mentor</th>
+                        <th>Students</th>
+                        <th>Period</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var group in FilteredGroups)
+                    {
+                        var index = FilteredGroups.ToList().IndexOf(group) + 1;
+                        <tr>
+                            <td class="td-num">@index</td>
+                            <td>
+                                <div class="student-cell">
+                                    <div class="group-avatar">
+                                        <i class="bi bi-collection-play-fill"></i>
+                                    </div>
+                                    <div class="student-info">
+                                        <span class="student-name">@group.Name</span>
+                                        @if (!string.IsNullOrEmpty(group.Description))
+                                        {
+                                            <span class="student-bio">@(group.Description.Length > 30 ? group.Description.Substring(0, 30) + "..." : group.Description)</span>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="td-course">@group.Course.Name</td>
+                            <td class="td-mentor">@group.Mentor.FullName</td>
+                            <td class="td-students">@group.CurrentStudentCount / @group.MaxStudents</td>
+                            <td class="td-period">@group.StartDate.ToString("dd MMM") - @(group.EndDate?.ToString("dd MMM yyyy") ?? "Ongoing")</td>
+                            <td>
+                                @if (group.Status.ToString() == "Active")
+                                {
+                                    <span class="status-badge active">Active</span>
+                                }
+                                else if (group.Status.ToString() == "Completed")
+                                {
+                                    <span class="status-badge completed">Completed</span>
+                                }
+                                else
+                                {
+                                    <span class="status-badge cancelled">Cancelled</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="action-btns">
+                                    <button class="btn-icon btn-view" title="View" @onclick="() => OpenViewModal(group)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn-icon btn-edit" title="Edit" @onclick="() => OpenEditModal(group)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn-icon btn-delete" title="Delete" @onclick="() => OpenDeleteConfirm(group)">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@* CREATE MODAL *@
+@if (showCreateModal)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon create-icon">
+                    <i class="bi bi-collection-play-fill"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Create New Group</h2>
+                    <p class="premium-modal-subtitle">Fill in the information below</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="premium-form-grid">
+                    <div class="premium-form-group full-width">
+                        <label>Group Name <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-tag"></i>
+                            <input type="text" @bind="createDto.Name" placeholder="e.g., Frontend Group A" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Course <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-book"></i>
+                            <input type="number" @bind="createDto.CourseId" placeholder="Course ID" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Mentor <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-person-badge"></i>
+                            <input type="number" @bind="createDto.MentorId" placeholder="Mentor ID" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Start Date <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-calendar3"></i>
+                            <input type="date" @bind="createDto.StartDate" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>End Date</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-calendar3"></i>
+                            <input type="date" @bind="createDto.EndDate" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Max Students <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-people"></i>
+                            <input type="number" @bind="createDto.MaxStudents" placeholder="15" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Description</label>
+                        <div class="premium-input-wrapper textarea">
+                            <i class="bi bi-chat"></i>
+                            <textarea @bind="createDto.Description" placeholder="Group description..." rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="premium-alert error">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        @errorMessage
+                    </div>
+                }
+
+                <div class="premium-modal-footer">
+                    <button type="button" class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="premium-btn-primary" @onclick="CreateGroup" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="premium-spinner"></span>
+                            <span>Creating...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-lg"></i>
+                            <span>Create Group</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* VIEW MODAL *@
+@if (showViewModal && selectedGroup != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal premium-modal-view" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon view-icon">
+                    <i class="bi bi-collection-play-fill"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Group Details</h2>
+                    <p class="premium-modal-subtitle">View group information</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="profile-header-group">
+                    <div class="profile-avatar-large group-color">
+                        <i class="bi bi-collection-play-fill" style="font-size: 40px;"></i>
+                    </div>
+                    <div class="profile-info-large">
+                        <h3 class="profile-name">@selectedGroup.Name</h3>
+                        <span class="profile-email">@selectedGroup.Course.Name</span>
+                        <div class="profile-status-toggle">
+                            <span class="status-label">Status:</span>
+                            <div class="group-status-badge @(selectedGroup.Status.ToString().ToLower())">
+                                @selectedGroup.Status
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="details-grid">
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="bi bi-person-badge"></i>
+                        </div>
+                        <div class="detail-content">
+                            <label>Mentor</label>
+                            <p>@selectedGroup.Mentor.FullName</p>
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="bi bi-calendar3"></i>
+                        </div>
+                        <div class="detail-content">
+                            <label>Period</label>
+                            <p>@selectedGroup.StartDate.ToString("dd MMM yyyy") - @(selectedGroup.EndDate?.ToString("dd MMM yyyy") ?? "Ongoing")</p>
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="bi bi-people"></i>
+                        </div>
+                        <div class="detail-content">
+                            <label>Students</label>
+                            <p>@selectedGroup.CurrentStudentCount / @selectedGroup.MaxStudents</p>
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="bi bi-calendar-check"></i>
+                        </div>
+                        <div class="detail-content">
+                            <label>Created At</label>
+                            <p>@selectedGroup.CreatedAt.ToString("dd MMM yyyy")</p>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(selectedGroup.Description))
+                    {
+                        <div class="detail-card full-width">
+                            <div class="detail-icon">
+                                <i class="bi bi-chat-quote"></i>
+                            </div>
+                            <div class="detail-content">
+                                <label>Description</label>
+                                <p class="bio-text">@selectedGroup.Description</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="premium-modal-footer">
+                <button class="premium-btn-secondary" @onclick="CloseModals">Close</button>
+                <button class="premium-btn-edit" @onclick="(() => { CloseModals(); OpenEditModal(selectedGroup); })">
+                    <i class="bi bi-pencil"></i> Edit Group
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* DELETE MODAL *@
+@if (showDeleteConfirm && selectedGroup != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal premium-modal-sm" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon delete-icon">
+                    <i class="bi bi-trash3-fill"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Delete Group</h2>
+                    <p class="premium-modal-subtitle">This action cannot be undone</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body text-center">
+                <div class="delete-warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <p>Are you sure you want to delete <strong>@selectedGroup.Name</strong>?</p>
+                    <small>All related data will be permanently removed.</small>
+                </div>
+            </div>
+            <div class="premium-modal-footer">
+                <button class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button class="premium-btn-danger" @onclick="DeleteGroup" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="premium-spinner"></span>
+                        <span>Deleting...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-trash3"></i>
+                        <span>Delete Permanently</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* EDIT MODAL *@
+@if (showEditModal && selectedGroup != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon edit-icon">
+                    <i class="bi bi-pencil-square"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Edit Group</h2>
+                    <p class="premium-modal-subtitle">Update group information</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="premium-form-grid">
+                    <div class="premium-form-group full-width">
+                        <label>Group Name</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-tag"></i>
+                            <input type="text" @bind="selectedGroup.Name" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Mentor ID</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-person-badge"></i>
+                            <input type="number" @bind="selectedGroup.Mentor.Id" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>End Date</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-calendar3"></i>
+                            <input type="date" @bind="selectedGroup.EndDate" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Max Students</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-people"></i>
+                            <input type="number" @bind="selectedGroup.MaxStudents" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Status</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-toggle-on"></i>
+                            <select @bind="selectedGroup.Status">
+                                <option value="Active">Active</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Description</label>
+                        <div class="premium-input-wrapper textarea">
+                            <i class="bi bi-chat"></i>
+                            <textarea @bind="selectedGroup.Description" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="premium-modal-footer">
+                    <button type="button" class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="premium-btn-primary" @onclick="UpdateGroup" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="premium-spinner"></span>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-save"></i>
+                            <span>Save Changes</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<GroupResponseDto> groups = new();
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string searchQuery = "";
+    private string filterStatus = "";
+    private string errorMessage = "";
+
+    private bool showCreateModal = false;
+    private bool showViewModal = false;
+    private bool showEditModal = false;
+    private bool showDeleteConfirm = false;
+
+    private GroupCreateDto createDto = new();
+    private GroupResponseDto? selectedGroup;
+
+    private IEnumerable<GroupResponseDto> FilteredGroups =>
+        groups.Where(g =>
+            (string.IsNullOrEmpty(searchQuery) ||
+             g.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+             g.Course.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+             g.Mentor.FullName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(filterStatus) || g.Status.ToString() == filterStatus));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGroups();
+    }
+
+    private async Task LoadGroups()
+    {
+        isLoading = true;
+        try
+        {
+            groups = await GroupService.GetAllAsync() ?? new();
+            Console.WriteLine($"Loaded {groups.Count} groups");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading groups: {ex.Message}");
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OpenCreateModal()
+    {
+        createDto = new()
+        {
+            StartDate = DateTime.Today,
+            MaxStudents = 15
+        };
+        errorMessage = "";
+        showCreateModal = true;
+    }
+
+    private void OpenViewModal(GroupResponseDto group)
+    {
+        selectedGroup = group;
+        showViewModal = true;
+    }
+
+    private void OpenEditModal(GroupResponseDto group)
+    {
+        selectedGroup = group;
+        showEditModal = true;
+    }
+
+    private void OpenDeleteConfirm(GroupResponseDto group)
+    {
+        selectedGroup = group;
+        showDeleteConfirm = true;
+    }
+
+    private void CloseModals()
+    {
+        showCreateModal = false;
+        showViewModal = false;
+        showEditModal = false;
+        showDeleteConfirm = false;
+        selectedGroup = null;
+        errorMessage = "";
+        StateHasChanged();
+    }
+
+    private async Task CreateGroup()
+    {
+        isSaving = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var result = await GroupService.CreateAsync(createDto);
+            if (result != null)
+            {
+                await LoadGroups();
+                CloseModals();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            StateHasChanged();
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateGroup()
+    {
+        if (selectedGroup == null) return;
+
+        isSaving = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var updateDto = new GroupUpdateDto
+            {
+                Name = selectedGroup.Name,
+                MentorId = selectedGroup.Mentor.Id,
+                EndDate = selectedGroup.EndDate,
+                MaxStudents = selectedGroup.MaxStudents,
+                Description = selectedGroup.Description,
+                Status = selectedGroup.Status
+            };
+
+            var result = await GroupService.UpdateAsync(selectedGroup.Id, updateDto);
+            if (result != null)
+            {
+                await LoadGroups();
+                CloseModals();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            StateHasChanged();
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteGroup()
+    {
+        if (selectedGroup == null) return;
+
+        isSaving = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var success = await GroupService.DeleteAsync(selectedGroup.Id);
+            if (success)
+            {
+                await LoadGroups();
+                CloseModals();
+            }
+            else
+            {
+                errorMessage = "Failed to delete group. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        return name.Length > 0 ? name[0].ToString().ToUpper() : "?";
+    }
+}

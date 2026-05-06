@@ -1,6 +1,5 @@
 using Application.Dtos.LessonDto;
 using Application.Results;
-
 namespace Application.Interfaces.Services;
 
 public interface ILessonService

@@ -13,6 +13,8 @@ public interface IUnitOfWork
     IAttendanceRepository Attendances { get; }
     IWeekResultRepository WeekResults { get; }
     IGroupStudentRepository GroupStudents { get; }
+    IUserRepository Users{ get; }
+//     INotificationRepository Notifications { get; }
 
     Task<int> SaveChangesAsync(CancellationToken ct = default);
     Task BeginTransactionAsync();

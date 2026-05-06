@@ -1,6 +1,7 @@
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Infrastructure.Data;
+
 namespace Infrastructure;
 
 public class UnitOfWork(
@@ -12,16 +13,20 @@ public class UnitOfWork(
     ILessonRepository lessons,
     IAttendanceRepository attendances,
     IWeekResultRepository weekResults,
+    IUserRepository users,
+    //INotificationRepository notifications,
     IGroupStudentRepository groupStudents) : IUnitOfWork
 {
     public IGroupRepository Groups => groups;
-    public ICourseRepository Courses => courses ;
+    public ICourseRepository Courses => courses;
     public IStudentRepository Students => students;
     public IMentorRepository Mentors => mentors;
     public ILessonRepository Lessons => lessons;
     public IAttendanceRepository Attendances => attendances;
     public IWeekResultRepository WeekResults => weekResults;
     public IGroupStudentRepository GroupStudents => groupStudents;
+    public IUserRepository Users => users;
+    //public INotificationRepository Notifications => notifications;
 
     public async Task<int> SaveChangesAsync(CancellationToken ct = default)
         => await context.SaveChangesAsync(ct);

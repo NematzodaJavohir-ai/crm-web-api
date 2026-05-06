@@ -7,6 +7,7 @@ public interface IStudentService
 {
     // ───── Admin ─────
     Task<Result<StudentResponseDto>> CreateAsync(StudentCreateDto dto, CancellationToken ct = default);
+    Task<Result<StudentResponseDto>> UpdateAsync(int id, StudentUpdateDto dto, CancellationToken ct = default);
     Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default);
     Task<Result<IEnumerable<StudentResponseDto>>> GetAllAsync(CancellationToken ct = default);
     Task<Result<StudentResponseDto>> SetActiveAsync(int id, bool isActive, CancellationToken ct = default);
@@ -15,6 +16,7 @@ public interface IStudentService
     Task<Result<IEnumerable<StudentResponseDto>>> GetByGroupIdAsync(int groupId, CancellationToken ct = default);
     Task<Result<StudentWithGroupsDto>> GetWithGroupsAsync(int id, CancellationToken ct = default);
     Task<Result<StudentFullProfileDto>> GetFullProfileAsync(int id, CancellationToken ct = default);
+    Task<Result<StudentResponseDto>> GetByIdAsync(int id, CancellationToken ct = default);
 
     // ───── Student (свой профиль) ─────
     Task<Result<StudentResponseDto>> GetMyProfileAsync(int userId, CancellationToken ct = default);

@@ -14,7 +14,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasMaxLength(100);
 
-            builder.Property(u => u.LastName)
+        builder.Property(u => u.LastName)
             .IsRequired()
             .HasMaxLength(100);
 
@@ -22,36 +22,35 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasMaxLength(150);
 
-        builder.Property(u => u.PasswordHash)
-            .IsRequired();
-
-            builder.Property(u => u.PhoneNumber)
+        builder.Property(u => u.PhoneNumber)
             .IsRequired()
             .HasMaxLength(50);
 
+        builder.Property(u => u.PasswordHash)
+            .IsRequired();
 
+        builder.Property(u => u.PhotoUrl) 
+            .HasMaxLength(300);
 
-    
+        builder.Property(u => u.RefreshToken)    
+            .HasMaxLength(500);
 
         builder.HasIndex(u => u.Email)
             .IsUnique();
 
-             builder.HasIndex(u => u.PhoneNumber)
+        builder.HasIndex(u => u.PhoneNumber)
             .IsUnique();
 
-    
         builder.HasOne(u => u.Role)
             .WithMany(r => r.Users)
             .HasForeignKey(u => u.RoleId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        
         builder.HasOne(u => u.Mentor)
             .WithOne(m => m.User)
             .HasForeignKey<Mentor>(m => m.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-     
         builder.HasOne(u => u.Student)
             .WithOne(s => s.User)
             .HasForeignKey<Student>(s => s.UserId)
