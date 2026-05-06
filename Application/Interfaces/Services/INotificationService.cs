@@ -11,4 +11,5 @@ public interface INotificationService
     Task<Result<UnreadCountDto>> GetUnreadCountAsync(int userId, CancellationToken ct = default);
     Task<Result<bool>> MarkAsReadAsync(int notificationId, int userId, CancellationToken ct = default);
     Task<Result<bool>> MarkAllAsReadAsync(int userId, CancellationToken ct = default);
+    Task<Result<bool>> DeleteAsync(int notificationId, int userId, CancellationToken ct = default);
 }

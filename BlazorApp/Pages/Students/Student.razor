@@ -1,0 +1,606 @@
+﻿@page "/students"
+@using BlazorApp.ApiServices.Interfaces
+@using BlazorApp.DTOs.StudentDto
+@inject IStudentApiService StudentService
+
+<div class="students-page">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1 class="page-title">Students</h1>
+            <span class="page-subtitle">Manage all students in your platform</span>
+        </div>
+        <button class="btn-create" @onclick="OpenCreateModal">
+            <i class="bi bi-plus-lg"></i>
+            Add Student
+        </button>
+    </div>
+
+    <div class="toolbar">
+        <div class="search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" placeholder="Search students..."
+                   @bind="searchQuery" @bind:event="oninput" />
+        </div>
+        <div class="filter-wrap">
+            <select @bind="filterActive">
+                <option value="">All Status</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+        </div>
+        <span class="total-count">@FilteredStudents.Count() students</span>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-wrap">
+            <div class="spinner"></div>
+            <span>Loading students...</span>
+        </div>
+    }
+    else if (!FilteredStudents.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-people"></i>
+            <h3>No students found</h3>
+            <p>Try adjusting your search or add a new student</p>
+            <button class="btn-create" @onclick="OpenCreateModal">
+                <i class="bi bi-plus-lg"></i> Add First Student
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Telegram</th>
+                        <th>Enroll Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var (student, index) in FilteredStudents.Select((s, i) => (s, i)))
+                    {
+                        <tr>
+                            <td class="td-num">@(index + 1)</td>
+                            <td>
+                                <div class="student-cell">
+                                    <div class="student-avatar">
+                                        @GetInitials(student.FullName)
+                                    </div>
+                                    <div class="student-info">
+                                        <span class="student-name">@student.FullName</span>
+                                        @if (!string.IsNullOrEmpty(student.AboutMe))
+                                        {
+                                            <span class="student-bio">@(student.AboutMe.Length > 30 ? student.AboutMe.Substring(0, 30) + "..." : student.AboutMe)</span>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="td-email">@student.Email</td>
+                            <td>@(student.Phone ?? "—")</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(student.TelegramUsername))
+                                {
+                                    <span class="telegram-badge">
+                                        <i class="bi bi-telegram"></i>
+                                        @student.TelegramUsername
+                                    </span>
+                                }
+                                else { <span class="td-empty">—</span> }
+                            </td>
+                            <td>@student.EnrollDate.ToString("dd MMM yyyy")</td>
+                            <td>
+                                <div class="action-btns">
+                                    <button class="btn-icon btn-view" title="View"
+                                            @onclick="() => OpenViewModal(student)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn-icon btn-edit" title="Edit"
+                                            @onclick="() => OpenEditModal(student)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn-icon btn-delete" title="Delete"
+                                            @onclick="() => OpenDeleteConfirm(student)">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </div>
+                             </td>
+                         </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@* CREATE MODAL *@
+@if (showCreateModal)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon create-icon">
+                    <i class="bi bi-person-plus-fill"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Create New Student</h2>
+                    <p class="premium-modal-subtitle">Fill in the information below</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="premium-form-grid">
+                    <div class="premium-form-group">
+                        <label>Full Name <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-person"></i>
+                            <input type="text" @bind="createDto.FullName" placeholder="John Doe" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Email <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-envelope"></i>
+                            <input type="email" @bind="createDto.Email" placeholder="john@example.com" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Password <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-key"></i>
+                            <input type="password" @bind="createDto.Password" placeholder="••••••••" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Phone</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-telephone"></i>
+                            <input type="text" @bind="createDto.Phone" placeholder="+992 XX XXX XXXX" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Telegram</label>
+                        <div class="premium-input-wrapper">
+    <i class="bi bi-telegram"></i>
+    <input type="text" @bind="createDto.TelegramUsername" placeholder="Telegram username" />
+</div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Date of Birth</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-calendar3"></i>
+                            <input type="date" @bind="createDto.DateOfBirth" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>GitHub URL</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-github"></i>
+                            <input type="text" @bind="createDto.GithubUrl" placeholder="https://github.com/username" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Photo URL</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-image"></i>
+                            <input type="text" @bind="createDto.PhotoUrl" placeholder="https://..." />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>About Me</label>
+                        <div class="premium-input-wrapper textarea">
+                            <i class="bi bi-chat"></i>
+                            <textarea @bind="createDto.AboutMe" placeholder="Short bio about the student..." rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="premium-alert error">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        @errorMessage
+                    </div>
+                }
+
+                <div class="premium-modal-footer">
+                    <button type="button" class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="premium-btn-primary" @onclick="CreateStudent" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="premium-spinner"></span>
+                            <span>Creating...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-lg"></i>
+                            <span>Create Student</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* VIEW MODAL *@
+@if (showViewModal && selectedStudent != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal premium-modal-view" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon view-icon">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Student Profile</h2>
+                    <p class="premium-modal-subtitle">View student details</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="profile-header">
+                    <div class="profile-avatar">@GetInitials(selectedStudent.FullName)</div>
+                    <div class="profile-info">
+                        <h3>@selectedStudent.FullName</h3>
+                        <span>@selectedStudent.Email</span>
+                    </div>
+                </div>
+                <div class="info-grid">
+                    <div class="info-card">
+                        <i class="bi bi-telephone"></i>
+                        <div>
+                            <label>Phone</label>
+                            <p>@(selectedStudent.Phone ?? "Not set")</p>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <i class="bi bi-telegram"></i>
+                        <div>
+                            <label>Telegram</label>
+                            <p>@(selectedStudent.TelegramUsername ?? "Not set")</p>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <i class="bi bi-github"></i>
+                        <div>
+                            <label>GitHub</label>
+                            <p>
+                                @if (!string.IsNullOrEmpty(selectedStudent.GithubUrl))
+                                {
+                                    <a href="@selectedStudent.GithubUrl" target="_blank">View Profile</a>
+                                }
+                                else { <span>Not set</span> }
+                            </p>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <i class="bi bi-calendar3"></i>
+                        <div>
+                            <label>Date of Birth</label>
+                            <p>@(selectedStudent.DateOfBirth?.ToString("dd MMM yyyy") ?? "Not set")</p>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <i class="bi bi-calendar-check"></i>
+                        <div>
+                            <label>Enrolled Date</label>
+                            <p>@selectedStudent.EnrollDate.ToString("dd MMM yyyy")</p>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(selectedStudent.AboutMe))
+                    {
+                        <div class="info-card full-width">
+                            <i class="bi bi-chat"></i>
+                            <div>
+                                <label>About</label>
+                                <p>@selectedStudent.AboutMe</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="premium-modal-footer">
+                <button class="premium-btn-secondary" @onclick="CloseModals">Close</button>
+                <button class="premium-btn-edit" @onclick="(() => { CloseModals(); OpenEditModal(selectedStudent); })">
+                    <i class="bi bi-pencil"></i> Edit Student
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* DELETE MODAL *@
+@if (showDeleteConfirm && selectedStudent != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal premium-modal-sm" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon delete-icon">
+                    <i class="bi bi-trash3-fill"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Delete Student</h2>
+                    <p class="premium-modal-subtitle">This action cannot be undone</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body text-center">
+                <div class="delete-warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <p>Are you sure you want to delete <strong>@selectedStudent.FullName</strong>?</p>
+                    <small>All related data will be permanently removed.</small>
+                </div>
+            </div>
+            <div class="premium-modal-footer">
+                <button class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button class="premium-btn-danger" @onclick="DeleteStudent" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="premium-spinner"></span>
+                        <span>Deleting...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-trash3"></i>
+                        <span>Delete Permanently</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* EDIT MODAL *@
+@if (showEditModal && selectedStudent != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon edit-icon">
+                    <i class="bi bi-pencil-square"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Edit Student</h2>
+                    <p class="premium-modal-subtitle">Update student information</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="premium-form-grid">
+                    <div class="premium-form-group full-width">
+                        <label>Full Name</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-person"></i>
+                            <input type="text" @bind="selectedStudent.FullName" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Email</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-envelope"></i>
+                            <input type="email" @bind="selectedStudent.Email" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Phone</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-telephone"></i>
+                            <input type="text" @bind="selectedStudent.Phone" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Telegram</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-telegram"></i>
+                            <input type="text" @bind="selectedStudent.TelegramUsername" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>GitHub URL</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-github"></i>
+                            <input type="text" @bind="selectedStudent.GithubUrl" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>About Me</label>
+                        <div class="premium-input-wrapper textarea">
+                            <i class="bi bi-chat"></i>
+                            <textarea @bind="selectedStudent.AboutMe" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="premium-modal-footer">
+                    <button type="button" class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="premium-btn-primary" @onclick="UpdateStudent" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="premium-spinner"></span>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-save"></i>
+                            <span>Save Changes</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<StudentResponseDto> students = new();
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string searchQuery = "";
+    private string filterActive = "";
+    private string errorMessage = "";
+
+    private bool showCreateModal = false;
+    private bool showViewModal = false;
+    private bool showEditModal = false;
+    private bool showDeleteConfirm = false;
+
+    private StudentCreateDto createDto = new();
+    private StudentResponseDto? selectedStudent;
+
+    private IEnumerable<StudentResponseDto> FilteredStudents =>
+        students.Where(s =>
+            (string.IsNullOrEmpty(searchQuery) ||
+             s.FullName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+             s.Email.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStudents();
+    }
+
+    private async Task LoadStudents()
+    {
+        isLoading = true;
+        students = await StudentService.GetAllAsync() ?? new();
+        isLoading = false;
+    }
+
+    private void OpenCreateModal()
+    {
+        createDto = new();
+        errorMessage = "";
+        showCreateModal = true;
+    }
+
+    private void OpenViewModal(StudentResponseDto student)
+    {
+        selectedStudent = student;
+        showViewModal = true;
+    }
+
+    private void OpenEditModal(StudentResponseDto student)
+    {
+        selectedStudent = student;
+        showEditModal = true;
+    }
+
+    private void OpenDeleteConfirm(StudentResponseDto student)
+    {
+        selectedStudent = student;
+        showDeleteConfirm = true;
+    }
+
+    private void CloseModals()
+    {
+        showCreateModal = false;
+        showViewModal = false;
+        showEditModal = false;
+        showDeleteConfirm = false;
+        selectedStudent = null;
+        errorMessage = "";
+        StateHasChanged();
+    }
+
+    private async Task CreateStudent()
+    {
+        isSaving = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        var result = await StudentService.CreateAsync(createDto);
+
+        if (result != null)
+        {
+            await LoadStudents();
+            CloseModals();
+        }
+        else
+        {
+            errorMessage = "Failed to create student. Please try again.";
+        }
+
+        isSaving = false;
+        StateHasChanged();
+    }
+
+    private async Task UpdateStudent()
+    {
+        if (selectedStudent == null) return;
+
+        isSaving = true;
+        StateHasChanged();
+
+        var updateDto = new StudentUpdateDto
+        {
+            Phone = selectedStudent.Phone,
+            TelegramUsername = selectedStudent.TelegramUsername,
+            GithubUrl = selectedStudent.GithubUrl,
+            AboutMe = selectedStudent.AboutMe,
+            DateOfBirth = selectedStudent.DateOfBirth
+        };
+
+        var result = await StudentService.UpdateAsync(selectedStudent.Id, updateDto);
+
+        if (result != null)
+        {
+            await LoadStudents();
+            CloseModals();
+        }
+        else
+        {
+            errorMessage = "Failed to update student. Please try again.";
+        }
+
+        isSaving = false;
+        StateHasChanged();
+    }
+
+    private async Task DeleteStudent()
+    {
+        if (selectedStudent == null) return;
+
+        isSaving = true;
+        StateHasChanged();
+
+        var success = await StudentService.DeleteAsync(selectedStudent.Id);
+
+        if (success)
+        {
+            await LoadStudents();
+            CloseModals();
+        }
+        else
+        {
+            errorMessage = "Failed to delete student. Please try again.";
+        }
+
+        isSaving = false;
+        StateHasChanged();
+    }
+
+    private string GetInitials(string fullName)
+    {
+        if (string.IsNullOrEmpty(fullName)) return "?";
+        var parts = fullName.Trim().Split(' ');
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return fullName.Length > 0 ? fullName[0].ToString().ToUpper() : "?";
+    }
+}

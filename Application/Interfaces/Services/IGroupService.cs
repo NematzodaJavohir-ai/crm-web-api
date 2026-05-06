@@ -7,7 +7,7 @@ namespace Application.Interfaces.Services;
 public interface IGroupService
 {
     // ───── Admin ─────
-    Task<Result<GroupResponseDto>> CreateAsync(GroupCreateDto dto, CancellationToken ct = default);
+   Task<Result<GroupResponseDto>> CreateAsync(GroupCreateDto dto, CancellationToken ct = default);
     Task<Result<GroupResponseDto>> UpdateAsync(int id, GroupUpdateDto dto, CancellationToken ct = default);
     Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default);
     Task<Result<IEnumerable<GroupResponseDto>>> GetAllAsync(CancellationToken ct = default);

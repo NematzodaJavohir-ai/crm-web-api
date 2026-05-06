@@ -10,8 +10,11 @@ public class User
     public string PasswordHash { get; set; } = null!;
     public int RoleId { get; set; }
     public bool IsActive { get; set; } = true;
+    public string? PhotoUrl { get; set; } 
+    public string? RefreshToken { get; set; }  
+    public DateTime? RefreshTokenExpiry { get; set; } 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? UpdatedAt { get; set;}
+    public DateTime? UpdatedAt { get; set; }
 
     // Navigation
     public Role Role { get; set; } = null!;
@@ -19,4 +22,3 @@ public class User
     public Student? Student { get; set; }
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 }
-

@@ -13,7 +13,7 @@ public class MentorController(IMentorService mentorService) : BaseController
     // ───── Admin ─────
 
     [HttpPost]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Create([FromBody] MentorCreateDto dto, CancellationToken ct)
     {
         var result = await mentorService.CreateAsync(dto, ct);
@@ -21,7 +21,7 @@ public class MentorController(IMentorService mentorService) : BaseController
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         var result = await mentorService.DeleteAsync(id, ct);
@@ -29,7 +29,7 @@ public class MentorController(IMentorService mentorService) : BaseController
     }
 
     [HttpGet]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         var result = await mentorService.GetAllAsync(ct);
@@ -37,7 +37,7 @@ public class MentorController(IMentorService mentorService) : BaseController
     }
 
     [HttpGet("active")]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> GetAllActive(CancellationToken ct)
     {
         var result = await mentorService.GetAllActiveAsync(ct);
@@ -45,7 +45,7 @@ public class MentorController(IMentorService mentorService) : BaseController
     }
 
     [HttpPatch("{id:int}/set-active")]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> SetActive(int id, [FromQuery] bool isActive, CancellationToken ct)
     {
         var result = await mentorService.SetActiveAsync(id, isActive, ct);
@@ -53,7 +53,7 @@ public class MentorController(IMentorService mentorService) : BaseController
     }
 
     [HttpGet("{id:int}")]
-    [Authorize(Roles = $"{nameof(UserRole.Admin)},{nameof(UserRole.Mentor)}")]
+    //[Authorize(Roles = $"{nameof(UserRole.Admin)},{nameof(UserRole.Mentor)}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
     {
         var result = await mentorService.GetByIdAsync(id, ct);
@@ -61,7 +61,7 @@ public class MentorController(IMentorService mentorService) : BaseController
     }
 
     [HttpGet("{id:int}/with-groups")]
-    [Authorize(Roles = $"{nameof(UserRole.Admin)},{nameof(UserRole.Mentor)}")]
+    //[Authorize(Roles = $"{nameof(UserRole.Admin)},{nameof(UserRole.Mentor)}")]
     public async Task<IActionResult> GetWithGroups(int id, CancellationToken ct)
     {
         var result = await mentorService.GetWithGroupsAsync(id, ct);
@@ -69,7 +69,7 @@ public class MentorController(IMentorService mentorService) : BaseController
     }
 
     [HttpGet("me")]
-    [Authorize(Roles = nameof(UserRole.Mentor))]
+   // [Authorize(Roles = nameof(UserRole.Mentor))]
     public async Task<IActionResult> GetMyProfile(CancellationToken ct)
     {
         var result = await mentorService.GetMyProfileAsync(GetUserId(), ct);
@@ -77,10 +77,18 @@ public class MentorController(IMentorService mentorService) : BaseController
     }
 
     [HttpPut("me")]
-    [Authorize(Roles = nameof(UserRole.Mentor))]
+   // [Authorize(Roles = nameof(UserRole.Mentor))]
     public async Task<IActionResult> UpdateMyProfile([FromBody] MentorUpdateDto dto, CancellationToken ct)
     {
         var result = await mentorService.UpdateMyProfileAsync(GetUserId(), dto, ct);
         return HandleResult(result);
     }
+
+[HttpPut("{id:int}")]
+// [Authorize(Roles = nameof(UserRole.Mentor))]
+public async Task<IActionResult> Update(int id, [FromBody] MentorUpdateDto dto, CancellationToken ct)
+{
+    var result = await mentorService.UpdateAsync(id, dto, ct);
+    return HandleResult(result);
+}
 }

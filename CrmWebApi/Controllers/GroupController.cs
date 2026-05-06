@@ -12,7 +12,7 @@ public class GroupController(IGroupService groupService) : BaseController
     // ───── Admin ─────
 
     [HttpPost]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Create([FromBody] GroupCreateDto dto, CancellationToken ct)
     {
         var result = await groupService.CreateAsync(dto, ct);
@@ -20,7 +20,7 @@ public class GroupController(IGroupService groupService) : BaseController
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Update(int id, [FromBody] GroupUpdateDto dto, CancellationToken ct)
     {
         var result = await groupService.UpdateAsync(id, dto, ct);
@@ -28,7 +28,7 @@ public class GroupController(IGroupService groupService) : BaseController
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         var result = await groupService.DeleteAsync(id, ct);
@@ -36,7 +36,7 @@ public class GroupController(IGroupService groupService) : BaseController
     }
 
     [HttpGet]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         var result = await groupService.GetAllAsync(ct);
@@ -44,7 +44,7 @@ public class GroupController(IGroupService groupService) : BaseController
     }
 
     [HttpGet("active")]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> GetAllActive(CancellationToken ct)
     {
         var result = await groupService.GetAllActiveAsync(ct);
@@ -52,7 +52,7 @@ public class GroupController(IGroupService groupService) : BaseController
     }
 
     [HttpGet("mentor/{mentorId:int}")]
-    [Authorize(Roles = $"{nameof(UserRole.Admin)},{nameof(UserRole.Mentor)}")]
+    //[Authorize(Roles = $"{nameof(UserRole.Admin)},{nameof(UserRole.Mentor)}")]
     public async Task<IActionResult> GetByMentorId(int mentorId, CancellationToken ct)
     {
         var result = await groupService.GetByMentorIdAsync(mentorId, ct);
@@ -60,7 +60,7 @@ public class GroupController(IGroupService groupService) : BaseController
     }
 
     [HttpGet("course/{courseId:int}")]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> GetByCourseId(int courseId, CancellationToken ct)
     {
         var result = await groupService.GetByCourseIdAsync(courseId, ct);
@@ -68,7 +68,7 @@ public class GroupController(IGroupService groupService) : BaseController
     }
 
     [HttpGet("{id:int}")]
-    [Authorize(Roles = $"{nameof(UserRole.Admin)},{nameof(UserRole.Mentor)}")]
+    //[Authorize(Roles = $"{nameof(UserRole.Admin)},{nameof(UserRole.Mentor)}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
     {
         var result = await groupService.GetByIdAsync(id, ct);
@@ -76,7 +76,7 @@ public class GroupController(IGroupService groupService) : BaseController
     }
 
     [HttpGet("{id:int}/with-students")]
-    [Authorize(Roles = $"{nameof(UserRole.Admin)},{nameof(UserRole.Mentor)}")]
+    //[Authorize(Roles = $"{nameof(UserRole.Admin)},{nameof(UserRole.Mentor)}")]
     public async Task<IActionResult> GetWithStudents(int id, CancellationToken ct)
     {
         var result = await groupService.GetWithStudentsAsync(id, ct);
@@ -84,7 +84,7 @@ public class GroupController(IGroupService groupService) : BaseController
     }
 
     [HttpPatch("{id:int}/status")]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> ChangeStatus(int id, [FromQuery] GroupStatus status, CancellationToken ct)
     {
         var result = await groupService.ChangeStatusAsync(id, status, ct);

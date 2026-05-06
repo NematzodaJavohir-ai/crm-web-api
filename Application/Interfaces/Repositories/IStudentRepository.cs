@@ -4,7 +4,7 @@ namespace Application.Interfaces.Repositories;
 
 public interface IStudentRepository
 {
- Task AddAsync(Student student, CancellationToken ct = default);
+    Task AddAsync(Student student, CancellationToken ct = default);
     void Update(Student student);
     void Delete(Student student);
     Task<bool> ExistsAsync(int id, CancellationToken ct = default);

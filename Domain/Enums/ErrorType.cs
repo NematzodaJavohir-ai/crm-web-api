@@ -2,11 +2,12 @@ namespace Domain.Enums;
 
 public enum ErrorType
 {
+    Unknown,
     NotFound,
-    NoChange,
-    Validation,
     Conflict,
     Unauthorized,
-    Unknown,
-    BadRequest,
+    Forbidden,
+    Validation,
+    BadRequest
+
 }
