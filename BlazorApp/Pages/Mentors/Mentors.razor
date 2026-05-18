@@ -241,7 +241,6 @@
     </div>
 }
 
-
 @* VIEW MODAL *@
 @if (showViewModal && selectedMentor != null)
 {
@@ -372,6 +371,7 @@
         </div>
     </div>
 }
+
 @* DELETE MODAL *@
 @if (showDeleteConfirm && selectedMentor != null)
 {
@@ -523,48 +523,6 @@
 }
 
 @code {
-    private async Task ToggleStatus()
-{
-    if (selectedMentor == null) return;
-
-    isSaving = true;
-    StateHasChanged();
-
-    try
-    {
-        var newStatus = !selectedMentor.IsActive;
-        var success = await MentorService.SetActiveAsync(selectedMentor.Id, newStatus);
-        
-        if (success)
-        {
-            selectedMentor.IsActive = newStatus;
-            await LoadMentors();
-            // Показываем уведомление об успехе (опционально)
-            errorMessage = "";
-        }
-        else
-        {
-            errorMessage = "Failed to update status. Please try again.";
-        }
-    }
-    catch (Exception ex)
-    {
-        errorMessage = ex.Message;
-    }
-    finally
-    {
-        isSaving = false;
-        StateHasChanged();
-    }
-}
-
-    private void OpenLink(string url)
-{
-    if (!string.IsNullOrEmpty(url))
-    {
-        Navigation.NavigateTo(url, forceLoad: true);
-    }
-}
     private List<MentorResponseDto> mentors = new();
     private bool isLoading = true;
     private bool isSaving = false;
@@ -600,11 +558,6 @@
         try
         {
             mentors = await MentorService.GetAllAsync() ?? new();
-            Console.WriteLine($"Loaded {mentors.Count} mentors");
-            foreach (var m in mentors)
-            {
-                Console.WriteLine($"Mentor: {m.FullName}, IsActive: {m.IsActive}");
-            }
         }
         catch (Exception ex)
         {
@@ -758,22 +711,60 @@
         }
     }
 
+    private async Task ToggleStatus()
+    {
+        if (selectedMentor == null) return;
+
+        isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            var newStatus = !selectedMentor.IsActive;
+            var success = await MentorService.SetActiveAsync(selectedMentor.Id, newStatus);
+            
+            if (success)
+            {
+                selectedMentor.IsActive = newStatus;
+                await LoadMentors();
+                errorMessage = "";
+            }
+            else
+            {
+                errorMessage = "Failed to update status. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OpenLink(string url)
+    {
+        if (!string.IsNullOrEmpty(url))
+        {
+            Navigation.NavigateTo(url, forceLoad: true);
+        }
+    }
+
     private string GetInitials(string fullName)
     {
         if (string.IsNullOrWhiteSpace(fullName))
             return "?";
 
-        var parts = fullName
-            .Trim()
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var parts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         if (parts.Length == 0)
             return "?";
 
         if (parts.Length == 1)
-            return parts[0].Length > 0
-                ? parts[0][0].ToString().ToUpper()
-                : "?";
+            return parts[0].Length > 0 ? parts[0][0].ToString().ToUpper() : "?";
 
         return $"{parts[0][0]}{parts[1][0]}".ToUpper();
     }

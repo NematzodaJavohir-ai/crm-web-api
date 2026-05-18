@@ -2,8 +2,7 @@ using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Application.Configurations;
-
+namespace Infrastructure.Configurations;
 
 public class CourseConfiguration : IEntityTypeConfiguration<Course>
 {
@@ -11,21 +10,17 @@ public class CourseConfiguration : IEntityTypeConfiguration<Course>
     {
         builder.HasKey(c => c.Id);
 
-        builder.Property(c => c.Name)
-            .IsRequired()
-            .HasMaxLength(100);
-
-        builder.Property(c => c.Description)
-            .HasMaxLength(1000);
-
-        builder.HasIndex(c => c.Name)
-            .IsUnique();
-
+        builder.Property(c => c.Name).HasMaxLength(200).IsRequired();
+        builder.Property(c => c.Description).HasMaxLength(2000);
+        builder.Property(c => c.Price).HasColumnType("decimal(18,2)");
+        builder.Property(c => c.IconUrl).HasMaxLength(500);
 
         builder.HasMany(c => c.Groups)
             .WithOne(g => g.Course)
             .HasForeignKey(g => g.CourseId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(c => c.Name).IsUnique();
+        builder.HasIndex(c => c.IsActive);
     }
-    
 }

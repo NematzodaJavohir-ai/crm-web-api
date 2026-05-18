@@ -1,10 +1,8 @@
-using System;
-
 namespace Application.Dtos.LessonDto;
 
 public class LessonResponseDto
 {
-   public int Id { get; set; }
+    public int Id { get; set; }
     public int GroupId { get; set; }
     public string GroupName { get; set; } = null!;
     public int WeekNumber { get; set; }
@@ -14,5 +12,6 @@ public class LessonResponseDto
     public string? HomeworkDescription { get; set; }
     public string? MaterialUrl { get; set; }
     public bool IsCompleted { get; set; }
+    public int AttendanceCount { get; set; }
     public DateTime CreatedAt { get; set; }
 }

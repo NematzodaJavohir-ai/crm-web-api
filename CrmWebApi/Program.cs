@@ -114,7 +114,7 @@ builder.Services.AddHangfire(config => config
         options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("DefaultConnection"));
     }));
 builder.Services.AddHangfireServer();
-builder.Services.AddScoped<WeeklyReportJob>();
+//builder.Services.AddScoped<WeeklyReportJob>();
 
 // DI Registration
 //builder.Services.AddScoped<INotificationService, NotificationService>();

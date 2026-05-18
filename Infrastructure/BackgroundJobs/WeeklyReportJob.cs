@@ -1,127 +1,164 @@
 using Application.Interfaces.Services;
 using Application.Email;
+using Domain.Entities;
+using Domain.Enums;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Infrastructure.Jobs;
 
-public class WeeklyReportJob(
-    DataContext context,
-    IEmailService emailService)
+public class WeeklyReportJob
 {
+    private readonly DataContext _context;
+    private readonly IEmailService _emailService;
+
+    public WeeklyReportJob(DataContext context, IEmailService emailService)
+    {
+        _context = context;
+        _emailService = emailService;
+    }
+
     public async Task SendWeeklyReportsAsync()
     {
-        // все активные группы
-        var groups = await context.Groups
-            .Where(g => g.Status == Domain.Enums.GroupStatus.Active)
+        var currentWeek = GetCurrentWeekNumber();
+
+        // 1. Загружаем группы и активных студентов
+        var groups = await _context.Groups
+            .Where(g => g.Status == GroupStatus.Active)
+            .Include(g => g.Course)
             .Include(g => g.GroupStudents.Where(gs => gs.IsActive))
                 .ThenInclude(gs => gs.Student)
                     .ThenInclude(s => s.User)
             .ToListAsync();
 
-        var currentWeek = GetCurrentWeekNumber();
+        // 2. Оптимизация: Загружаем все результаты и посещаемость одним запросом
+        var allWeekResults = await _context.WeekResults
+            .Where(wr => wr.WeekNumber == currentWeek)
+            .ToListAsync();
+
+        var allAttendances = await _context.Attendances
+            .Where(a => a.Lesson.WeekNumber == currentWeek)
+            .Include(a => a.Lesson)
+            .ToListAsync();
 
         foreach (var group in groups)
         {
             foreach (var groupStudent in group.GroupStudents)
             {
-                var student = groupStudent.Student;
-                var user = student.User;
+                try
+                {
+                    var student = groupStudent.Student;
+                    var user = student.User;
 
-                // берём результат за текущую неделю
-                var weekResult = await context.WeekResults
-                    .FirstOrDefaultAsync(wr =>
+                    if (string.IsNullOrEmpty(user.Email)) continue;
+
+                    // Поиск данных в локальных списках (без запросов к БД в цикле)
+                    var weekResult = allWeekResults.FirstOrDefault(wr =>
                         wr.StudentId == student.Id &&
-                        wr.GroupId == group.Id &&
-                        wr.WeekNumber == currentWeek);
+                        wr.GroupId == group.Id);
 
-                if (weekResult is null) continue;
+                    if (weekResult is null) continue;
 
-                // берём посещаемость за неделю
-                var attendances = await context.Attendances
-                    .Where(a =>
-                        a.StudentId == student.Id &&
-                        a.Lesson.GroupId == group.Id &&
-                        a.Lesson.WeekNumber == currentWeek)
-                    .Include(a => a.Lesson)
-                    .ToListAsync();
+                    var studentAttendances = allAttendances
+                        .Where(a => a.StudentId == student.Id && a.Lesson.GroupId == group.Id)
+                        .OrderBy(a => a.Lesson.LessonDate)
+                        .ToList();
 
-                var body = BuildEmailBody(
-                    firstName: user.FirstName,
-                    groupName: group.Name,
-                    weekNumber: currentWeek,
-                    attendances: attendances,
-                    weekResult: weekResult
-                );
+                    var body = BuildEmailBody(
+                        firstName: user.FirstName,
+                        groupName: group.Name,
+                        weekNumber: currentWeek,
+                        attendances: studentAttendances,
+                        weekResult: weekResult
+                    );
 
-                await emailService.SendEmail(
-                    to: user.Email,
-                    subject: $"📊 Week {currentWeek} Results — {group.Name}",
-                    body: body
-                );
+                    await _emailService.SendEmail(
+                        to: user.Email,
+                        subject: $"📊 Week {currentWeek} Results — {group.Name}",
+                        body: body
+                    );
+                }
+                catch (Exception ex)
+                {
+                    // Логируем ошибку, чтобы один сбой не ломал всю рассылку
+                    // _logger.LogError(ex, "Failed to send email to {Email}", groupStudent.Student.User.Email);
+                    continue;
+                }
             }
         }
     }
 
     private static int GetCurrentWeekNumber()
     {
-        var now = DateTime.UtcNow;
-        return System.Globalization.ISOWeek.GetWeekOfYear(now);
+        return ISOWeek.GetWeekOfYear(DateTime.UtcNow);
     }
 
     private static string BuildEmailBody(
         string firstName,
         string groupName,
         int weekNumber,
-        List<Domain.Entities.Attendance> attendances,
-        Domain.Entities.WeekResult weekResult)
+        List<Attendance> attendances,
+        WeekResult weekResult)
     {
         var rows = string.Join("", attendances.Select(a => $"""
             <tr>
-                <td>{a.Lesson.LessonDate:dd.MM.yyyy}</td>
-                <td>{(a.IsPresent ? "✅" : "❌")}</td>
-                <td>{a.Score}</td>
-                <td>{(a.HomeworkDone ? "✅" : "❌")}</td>
-                <td>{a.HomeworkScore}</td>
+                <td style="padding: 10px;">{a.Lesson.LessonDate:dd.MM.yyyy}</td>
+                <td style="text-align: center; padding: 10px;">{(a.IsPresent ? "✅" : "❌")}</td>
+                <td style="text-align: center; padding: 10px;">{(a.MentorNote ?? "-")}</td>
             </tr>
         """));
 
+        var commentHtml = !string.IsNullOrWhiteSpace(weekResult.MentorComment)
+            ? $"""
+            <div class="comment-box">
+                <strong>💬 Mentor comment:</strong><br/>{weekResult.MentorComment}
+            </div>
+            """
+            : "";
+
+        // Используем двойные скобки {{ }} для CSS, чтобы C# не путал их с интерполяцией
         return $"""
+        <!DOCTYPE html>
         <html>
-        <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>Hello, {firstName}! 👋</h2>
-            <p>Here are your results for <strong>Week {weekNumber}</strong> in <strong>{groupName}</strong>:</p>
+        <head>
+            <meta charset="utf-8" />
+            
+        </head>
+        <body>
+            <div class="container">
+                <h2>👋 Hello, {firstName}!</h2>
+                <p class="subtitle">Here are your results for <strong>Week {weekNumber}</strong> in <strong>{groupName}</strong></p>
 
-            <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-                <thead style="background-color: #4CAF50; color: white;">
-                    <tr>
-                        <th>Date</th>
-                        <th>Present</th>
-                        <th>Score</th>
-                        <th>Homework</th>
-                        <th>HW Score</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows}
-                </tbody>
-            </table>
+                <h3>📅 Attendance</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th style="text-align: center;">Present</th>
+                            <th style="text-align: center;">Note</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows}
+                    </tbody>
+                </table>
 
-            <br/>
-            <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 50%;">
-                <tr><td><strong>Attendance Score</strong></td><td>{weekResult.AttendanceScore}</td></tr>
-                <tr><td><strong>Bonus Score</strong></td><td>{weekResult.BonusScore}</td></tr>
-                <tr><td><strong>Exam Score</strong></td><td>{weekResult.ExamScore}</td></tr>
-                <tr style="background-color: #f0f0f0;">
-                    <td><strong>Total Score</strong></td>
-                    <td><strong>{weekResult.TotalScore}</strong></td>
-                </tr>
-            </table>
+                <h3>📊 Scores</h3>
+                <table class="summary-table">
+                    <tr><td>Attendance Score</td><td>{weekResult.AttendanceScore}</td></tr>
+                    <tr><td>Bonus Score</td><td>{weekResult.BonusScore}</td></tr>
+                    <tr><td>Exam Score</td><td>{weekResult.ExamScore}</td></tr>
+                    <tr class="total-row"><td>Total Score</td><td>{weekResult.TotalScore}</td></tr>
+                </table>
 
-            {(weekResult.MentorComment is not null ? $"<p>💬 <strong>Mentor comment:</strong> {weekResult.MentorComment}</p>" : "")}
+                {commentHtml}
 
-            <br/>
-            <p style="color: gray;">Keep it up! 💪</p>
+                <div class="footer">
+                    Keep it up! 💪<br/>
+                    <span style="font-size: 12px;">This report was generated automatically</span>
+                </div>
+            </div>
         </body>
         </html>
         """;

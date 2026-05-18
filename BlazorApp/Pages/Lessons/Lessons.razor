@@ -1,0 +1,660 @@
+﻿@page "/lessons"
+@using BlazorApp.ApiServices.Interfaces
+@using BlazorApp.DTOs.LessonDto
+@using BlazorApp.DTOs.GroupDto
+@inject ILessonApiService LessonService
+@inject IGroupApiService GroupService
+@inject NavigationManager Navigation
+
+<div class="lessons-page">
+    <div class="page-header">
+        <div class="page-header-left">
+            <div>
+                <h1 class="page-title">Lessons</h1>
+                <span class="page-subtitle">Manage lessons and track attendance</span>
+            </div>
+        </div>
+        <button class="btn-create" @onclick="OpenCreateModal">
+            <i class="bi bi-plus-lg"></i> Add Lesson
+        </button>
+    </div>
+
+    <div class="filter-bar">
+        <div class="form-group-inline">
+            <label>Group</label>
+            <select @bind="selectedGroupId" @bind:after="OnGroupChanged">
+                <option value="0">-- All Groups --</option>
+                @foreach (var g in allGroups)
+                {
+                    <option value="@g.Id">@g.Name</option>
+                }
+            </select>
+        </div>
+        @if (selectedGroupId > 0)
+        {
+            <div class="form-group-inline">
+                <label>Week</label>
+                <select @bind="selectedWeek" @bind:after="OnWeekChanged">
+                    <option value="0">All Weeks</option>
+                    @for (int w = 1; w <= 52; w++)
+                    {
+                        <option value="@w">Week @w</option>
+                    }
+                </select>
+            </div>
+        }
+        <div class="search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" placeholder="Search lessons..."
+                   @bind="searchQuery" @bind:event="oninput" />
+        </div>
+        <span class="total-count">@FilteredLessons.Count() lessons</span>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-wrap">
+            <div class="spinner"></div>
+            <span>Loading lessons...</span>
+        </div>
+    }
+    else if (!FilteredLessons.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-calendar3"></i>
+            <h3>No lessons found</h3>
+            <p>Select a group or add a new lesson</p>
+            <button class="btn-create" @onclick="OpenCreateModal">
+                <i class="bi bi-plus-lg"></i> Add First Lesson
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="lessons-grid">
+            @foreach (var lesson in FilteredLessons)
+            {
+                <div class="lesson-card @(lesson.IsCompleted ? "completed" : "")">
+                    <div class="lesson-card-header">
+                        <div class="lesson-week-badge">Week @lesson.WeekNumber</div>
+                        @if (lesson.IsCompleted)
+                        {
+                            <span class="status-badge completed">
+                                <i class="bi bi-check-circle-fill"></i> Completed
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="status-badge active">
+                                <i class="bi bi-circle"></i> Upcoming
+                            </span>
+                        }
+                    </div>
+
+                    <div class="lesson-card-body">
+                        <h3 class="lesson-title">@lesson.Title</h3>
+                        <div class="lesson-meta">
+                            <span class="meta-item">
+                                <i class="bi bi-diagram-3"></i>
+                                @lesson.GroupName
+                            </span>
+                            <span class="meta-item">
+                                <i class="bi bi-calendar3"></i>
+                                @lesson.LessonDate.ToString("dd MMM yyyy")
+                            </span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(lesson.Description))
+                        {
+                            <p class="lesson-desc">
+                                @(lesson.Description.Length > 80
+                                    ? lesson.Description[..80] + "..."
+                                    : lesson.Description)
+                            </p>
+                        }
+                        @if (!string.IsNullOrEmpty(lesson.HomeworkDescription))
+                        {
+                            <div class="homework-pill">
+                                <i class="bi bi-journal-text"></i>
+                                Homework assigned
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(lesson.MaterialUrl))
+                        {
+                            <button class="video-link" @onclick="() => WatchVideo(lesson.MaterialUrl)">
+                                <i class="bi bi-play-circle-fill"></i>
+                                Watch Lesson Video
+                            </button>
+                        }
+                    </div>
+
+                    <div class="lesson-card-footer">
+                        <button class="btn-attendance" title="Open Attendance"
+                                @onclick="() => OpenAttendance(lesson.Id)">
+                            <i class="bi bi-check2-square"></i>
+                            Attendance
+                        </button>
+                        <div class="card-actions">
+                            <button class="btn-icon btn-edit" title="Edit"
+                                    @onclick="() => OpenEditModal(lesson)">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            @if (!lesson.IsCompleted)
+                            {
+                                <button class="btn-icon btn-complete" title="Mark Complete"
+                                        @onclick="() => MarkComplete(lesson.Id)">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                            }
+                            <button class="btn-icon btn-delete" title="Delete"
+                                    @onclick="() => OpenDeleteConfirm(lesson)">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@* ── PREMIUM CREATE MODAL ── *@
+@if (showFormModal && !isEditing)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon create-icon">
+                    <i class="bi bi-calendar-plus-fill"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Add New Lesson</h2>
+                    <p class="premium-modal-subtitle">Create a lesson for the group</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="premium-form-grid">
+                    <div class="premium-form-group">
+                        <label>Group <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-collection"></i>
+                            <select @bind="createDto.GroupId">
+                                <option value="0">-- Select group --</option>
+                                @foreach (var g in allGroups)
+                                {
+                                    <option value="@g.Id">@g.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Week Number <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-grid"></i>
+                            <input type="number" @bind="createDto.WeekNumber" min="1" max="52" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Lesson Date <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-calendar3"></i>
+                            <input type="date" @bind="createDto.LessonDate" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Title <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-card-heading"></i>
+                            <input type="text" @bind="createDto.Title" placeholder="Lesson title" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Description</label>
+                        <div class="premium-input-wrapper textarea">
+                            <i class="bi bi-chat"></i>
+                            <textarea @bind="createDto.Description" placeholder="Lesson description..." rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Homework Description</label>
+                        <div class="premium-input-wrapper textarea">
+                            <i class="bi bi-journal-bookmark-fill"></i>
+                            <textarea @bind="createDto.HomeworkDescription" placeholder="Homework details..." rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Material URL (Video/Link)</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-link-45deg"></i>
+                            <input type="url" @bind="createDto.MaterialUrl" placeholder="https://..." />
+                        </div>
+                    </div>
+                </div>
+
+                @if (createDto.GroupId > 0)
+                {
+                    var selectedGroup = allGroups.FirstOrDefault(g => g.Id == createDto.GroupId);
+                    if (selectedGroup != null)
+                    {
+                        <div class="info-hint">
+                            <i class="bi bi-info-circle-fill"></i>
+                            Group starts on <strong>@selectedGroup.StartDate.ToString("dd.MM.yyyy")</strong>
+                        </div>
+                    }
+                }
+
+                @* ── ОШИБКИ ВАЛИДАЦИИ ── *@
+                @if (validationErrors.Any())
+                {
+                    <div class="validation-errors">
+                        <div class="error-header">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span>Validation failed:</span>
+                        </div>
+                        <ul class="error-list">
+                            @foreach (var err in validationErrors)
+                            {
+                                <li>@err</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <div class="premium-modal-footer">
+                    <button class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button class="premium-btn-primary" @onclick="SaveLesson" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="premium-spinner"></span>
+                            <span>Creating...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-lg"></i>
+                            <span>Create Lesson</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── PREMIUM EDIT MODAL ── *@
+@if (showFormModal && isEditing)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon edit-icon">
+                    <i class="bi bi-pencil-square"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Edit Lesson</h2>
+                    <p class="premium-modal-subtitle">Update lesson information</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="premium-form-grid">
+                    <div class="premium-form-group full-width">
+                        <label>Title <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-card-heading"></i>
+                            <input type="text" @bind="createDto.Title" placeholder="Lesson title" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Description</label>
+                        <div class="premium-input-wrapper textarea">
+                            <i class="bi bi-chat"></i>
+                            <textarea @bind="createDto.Description" placeholder="Lesson description..." rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Homework Description</label>
+                        <div class="premium-input-wrapper textarea">
+                            <i class="bi bi-journal-bookmark-fill"></i>
+                            <textarea @bind="createDto.HomeworkDescription" placeholder="Homework details..." rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Material URL (Video/Link)</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-link-45deg"></i>
+                            <input type="url" @bind="createDto.MaterialUrl" placeholder="https://..." />
+                        </div>
+                    </div>
+                </div>
+
+                @* ── ОШИБКИ ВАЛИДАЦИИ ── *@
+                @if (validationErrors.Any())
+                {
+                    <div class="validation-errors">
+                        <div class="error-header">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span>Validation failed:</span>
+                        </div>
+                        <ul class="error-list">
+                            @foreach (var err in validationErrors)
+                            {
+                                <li>@err</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <div class="premium-modal-footer">
+                    <button class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button class="premium-btn-primary" @onclick="SaveLesson" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="premium-spinner"></span>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-save"></i>
+                            <span>Save Changes</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── VIDEO PLAYER MODAL ── *@
+@if (showVideoModal && !string.IsNullOrEmpty(videoUrl))
+{
+    <div class="modal-overlay" @onclick="CloseVideoModal">
+        <div class="video-modal" @onclick:stopPropagation="true">
+            <div class="video-modal-header">
+                <h3 class="video-modal-title">
+                    <i class="bi bi-camera-video-fill"></i> Lesson Video
+                </h3>
+                <button class="video-modal-close" @onclick="CloseVideoModal">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="video-modal-body">
+                <div class="video-container">
+                    <iframe src="@GetVideoEmbedUrl(videoUrl)"
+                            frameborder="0"
+                            allowfullscreen
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── PREMIUM DELETE MODAL ── *@
+@if (showDeleteConfirm && selectedLesson != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal premium-modal-sm" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon delete-icon">
+                    <i class="bi bi-trash3-fill"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Delete Lesson</h2>
+                    <p class="premium-modal-subtitle">This action cannot be undone</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body text-center">
+                <div class="delete-warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <p>Are you sure you want to delete <strong>@selectedLesson.Title</strong>?</p>
+                    <small>All attendance records will be removed.</small>
+                </div>
+            </div>
+            <div class="premium-modal-footer">
+                <button class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button class="premium-btn-danger" @onclick="DeleteLesson" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="premium-spinner"></span>
+                        <span>Deleting...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-trash3"></i>
+                        <span>Delete Permanently</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    
+    private List<LessonResponseDto> lessons = new();
+    private List<GroupResponseDto> allGroups = new();
+    private int selectedGroupId = 0;
+    private int selectedWeek = 0;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool isEditing = false;
+    private string searchQuery = "";
+    private string errorMessage = "";
+    private List<string> validationErrors = new();
+
+    private bool showFormModal = false;
+    private bool showDeleteConfirm = false;
+    private bool showVideoModal = false;
+    private string videoUrl = "";
+
+    private LessonCreateDto createDto = new();
+    private LessonResponseDto? selectedLesson;
+
+    private IEnumerable<LessonResponseDto> FilteredLessons =>
+        lessons.Where(l =>
+            (selectedGroupId == 0 || l.GroupId == selectedGroupId) &&
+            (selectedWeek == 0 || l.WeekNumber == selectedWeek) &&
+            (string.IsNullOrEmpty(searchQuery) ||
+             (l.Title?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false) ||
+             l.GroupName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)));
+
+    protected override async Task OnInitializedAsync()
+    {
+        allGroups = await GroupService.GetAllAsync() ?? new();
+        await LoadLessons();
+        isLoading = false;
+    }
+
+    private async Task OnGroupChanged()
+    {
+        selectedWeek = 0;
+        await LoadLessons();
+    }
+
+    private async Task OnWeekChanged()
+    {
+        await LoadLessons();
+    }
+
+    private async Task LoadLessons()
+    {
+        isLoading = true;
+        if (selectedGroupId > 0)
+        {
+            if (selectedWeek > 0)
+                lessons = await LessonService.GetByWeekNumberAsync(selectedGroupId, selectedWeek) ?? new();
+            else
+                lessons = await LessonService.GetByGroupIdAsync(selectedGroupId) ?? new();
+        }
+        else
+        {
+            lessons = await LessonService.GetAllAsync() ?? new();
+        }
+        isLoading = false;
+    }
+
+    private void OpenCreateModal()
+    {
+        isEditing = false;
+        createDto = new LessonCreateDto
+        {
+            GroupId = selectedGroupId > 0 ? selectedGroupId : 0,
+            LessonDate = DateTime.Today,
+            WeekNumber = selectedWeek > 0 ? selectedWeek : 1
+        };
+        errorMessage = "";
+        validationErrors.Clear();
+        showFormModal = true;
+    }
+
+    private void OpenEditModal(LessonResponseDto lesson)
+    {
+        isEditing = true;
+        selectedLesson = lesson;
+        createDto = new LessonCreateDto
+        {
+            GroupId = lesson.GroupId,
+            WeekNumber = lesson.WeekNumber,
+            LessonDate = lesson.LessonDate,
+            Title = lesson.Title ?? "",
+            Description = lesson.Description,
+            HomeworkDescription = lesson.HomeworkDescription,
+            MaterialUrl = lesson.MaterialUrl
+        };
+        errorMessage = "";
+        validationErrors.Clear();
+        showFormModal = true;
+    }
+
+    private void OpenDeleteConfirm(LessonResponseDto lesson)
+    {
+        selectedLesson = lesson;
+        showDeleteConfirm = true;
+    }
+
+    private void OpenAttendance(int lessonId)
+        => Navigation.NavigateTo($"/lessons/{lessonId}/attendance");
+
+    private void WatchVideo(string url)
+    {
+        videoUrl = url;
+        showVideoModal = true;
+    }
+
+    private void CloseVideoModal()
+    {
+        showVideoModal = false;
+        videoUrl = "";
+    }
+
+    private void CloseModals()
+    {
+        showFormModal = false;
+        showDeleteConfirm = false;
+        selectedLesson = null;
+        errorMessage = "";
+        validationErrors.Clear();
+    }
+
+    private async Task SaveLesson()
+    {
+        isSaving = true;
+        errorMessage = "";
+        validationErrors.Clear();
+
+        if (isEditing && selectedLesson != null)
+        {
+            var updateDto = new LessonUpdateDto
+            {
+                Title = createDto.Title,
+                Description = createDto.Description,
+                HomeworkDescription = createDto.HomeworkDescription,
+                MaterialUrl = string.IsNullOrWhiteSpace(createDto.MaterialUrl) ? null : createDto.MaterialUrl
+            };
+            
+            var result = await LessonService.UpdateAsync(selectedLesson.Id, updateDto);
+            
+            if (result != null)
+            {
+                await LoadLessons();
+                CloseModals();
+            }
+            else
+            {
+                validationErrors = LessonService.LastErrors ?? new();
+                if (!validationErrors.Any())
+                    validationErrors.Add("Failed to update lesson. Please try again.");
+            }
+        }
+        else
+        {
+            var result = await LessonService.CreateAsync(createDto);
+            
+            if (result != null)
+            {
+                await LoadLessons();
+                CloseModals();
+            }
+            else
+            {
+                validationErrors = LessonService.LastErrors ?? new();
+                if (!validationErrors.Any())
+                    validationErrors.Add("Failed to create lesson. Please try again.");
+            }
+        }
+
+        isSaving = false;
+    }
+
+    private async Task DeleteLesson()
+    {
+        if (selectedLesson == null) return;
+        isSaving = true;
+        var success = await LessonService.DeleteAsync(selectedLesson.Id);
+        if (success)
+        {
+            await LoadLessons();
+            CloseModals();
+        }
+        isSaving = false;
+    }
+
+    private async Task MarkComplete(int id)
+    {
+        await LessonService.MarkAsCompletedAsync(id);
+        await LoadLessons();
+    }
+
+    private string GetVideoEmbedUrl(string url)
+    {
+        if (string.IsNullOrEmpty(url)) return "";
+        
+        // YouTube (watch?v=)
+        if (url.Contains("youtube.com/watch?v="))
+        {
+            var videoId = url.Split("v=")[1].Split('&')[0];
+            return $"https://www.youtube.com/embed/{videoId}";
+        }
+        // YouTube Shorts (youtu.be/)
+        if (url.Contains("youtu.be/"))
+        {
+            var videoId = url.Split("youtu.be/")[1].Split('?')[0];
+            return $"https://www.youtube.com/embed/{videoId}";
+        }
+        // Vimeo
+        if (url.Contains("vimeo.com/"))
+        {
+            var videoId = url.Split("vimeo.com/")[1].Split('?')[0];
+            return $"https://player.vimeo.com/video/{videoId}";
+        }
+        return url;
+    }
+}

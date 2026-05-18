@@ -10,7 +10,7 @@ namespace WebApi.Controllers;
 public class CourseController(ICourseService courseService) : BaseController
 {
     [HttpPost]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Create([FromBody] CourseCreateDto dto, CancellationToken ct)
     {
         var result = await courseService.CreateAsync(dto, ct);
@@ -18,7 +18,7 @@ public class CourseController(ICourseService courseService) : BaseController
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Update(int id, [FromBody] CourseUpdateDto dto, CancellationToken ct)
     {
         var result = await courseService.UpdateAsync(id, dto, ct);
@@ -26,7 +26,7 @@ public class CourseController(ICourseService courseService) : BaseController
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         var result = await courseService.DeleteAsync(id, ct);
@@ -34,7 +34,7 @@ public class CourseController(ICourseService courseService) : BaseController
     }
 
     [HttpPatch("{id:int}/set-active")]
-    [Authorize(Roles = nameof(UserRole.Admin))]
+    //[Authorize(Roles = nameof(UserRole.Admin))]
     public async Task<IActionResult> SetActive(int id, [FromQuery] bool isActive, CancellationToken ct)
     {
         var result = await courseService.SetActiveAsync(id, isActive, ct);
@@ -42,7 +42,7 @@ public class CourseController(ICourseService courseService) : BaseController
     }
 
     [HttpGet]
-    [Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
+    //[Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         var result = await courseService.GetAllAsync(ct);
@@ -58,7 +58,7 @@ public class CourseController(ICourseService courseService) : BaseController
     }
 
     [HttpGet("{id:int}")]
-    [Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
+   // [Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
     {
         var result = await courseService.GetByIdAsync(id, ct);
@@ -66,10 +66,20 @@ public class CourseController(ICourseService courseService) : BaseController
     }
 
     [HttpGet("{id:int}/with-groups")]
-    [Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
+    //[Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
     public async Task<IActionResult> GetWithGroups(int id, CancellationToken ct)
     {
         var result = await courseService.GetWithGroupsAsync(id, ct);
         return HandleResult(result);
     }
+    [HttpGet("short")]
+    //[Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
+
+public async Task<IActionResult> GetAllShort(CancellationToken ct)
+{
+    var result = await courseService.GetAllShortAsync(ct);
+    if (!result.IsSuccess)
+        return BadRequest(result.Error);
+    return Ok(result.Data);
+}
 }

@@ -1,11 +1,13 @@
 using System;
 using BlazorApp.ApiServices.Enums;
 using BlazorApp.DTOs.GroupDto;
+using BlazorApp.DTOs.MentorDto;
 
 namespace BlazorApp.ApiServices.Interfaces;
 
 public interface IGroupApiService
 {
+  
    Task<List<GroupResponseDto>?> GetAllAsync();
     Task<List<GroupResponseDto>?> GetAllActiveAsync();
     Task<GroupResponseDto?> GetByIdAsync(int id);

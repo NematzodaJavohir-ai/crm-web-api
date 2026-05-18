@@ -2,9 +2,7 @@ using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Application.Configurations;
-
-
+namespace Infrastructure.Configurations;
 
 public class AttendanceConfiguration : IEntityTypeConfiguration<Attendance>
 {
@@ -12,19 +10,19 @@ public class AttendanceConfiguration : IEntityTypeConfiguration<Attendance>
     {
         builder.HasKey(a => a.Id);
 
-        builder.HasIndex(a => new { a.LessonId, a.StudentId })
-            .IsUnique();
+        builder.Property(a => a.AbsenceReason).HasMaxLength(500);
+        builder.Property(a => a.MentorNote).HasMaxLength(500);
 
-        builder.Property(a => a.Score)
-            .HasDefaultValue(0);
+        builder.HasOne(a => a.Lesson)
+            .WithMany(l => l.Attendances)
+            .HasForeignKey(a => a.LessonId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Property(a => a.HomeworkScore)
-            .HasDefaultValue(0);
+        builder.HasOne(a => a.Student)
+            .WithMany(s => s.Attendances)
+            .HasForeignKey(a => a.StudentId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-        builder.Property(a => a.AbsenceReason)
-            .HasMaxLength(1000);
-
-        builder.Property(a => a.MentorNote)
-            .HasMaxLength(500);
+        builder.HasIndex(a => new { a.LessonId, a.StudentId }).IsUnique();
     }
 }

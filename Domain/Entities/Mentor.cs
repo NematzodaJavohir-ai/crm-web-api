@@ -7,8 +7,8 @@ public class Mentor
     public string? Specialization { get; set; }
     public int? ExperienceYears { get; set; }
     public string? Bio { get; set; }
-    public string? LinkedInUrl { get; set; } 
-    public string? GithubUrl { get; set; }   
+    public string? LinkedInUrl { get; set; }
+    public string? GithubUrl { get; set; }
     public DateTime HireDate { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
 

@@ -33,54 +33,58 @@ public class AttendanceRepository(DataContext context) : IAttendanceRepository
         => await context.Attendances
             .AsNoTracking()
             .Where(a => a.LessonId == lessonId)
-            .Include(a => a.Student)
-                .ThenInclude(s => s.User)
             .ToListAsync(ct);
 
     public async Task<IEnumerable<Attendance>> GetByStudentIdAsync(int studentId, CancellationToken ct = default)
         => await context.Attendances
             .AsNoTracking()
             .Where(a => a.StudentId == studentId)
-            .Include(a => a.Lesson)
-            .OrderBy(a => a.Lesson.LessonDate)
             .ToListAsync(ct);
 
     public async Task<IEnumerable<Attendance>> GetByStudentAndGroupAsync(int studentId, int groupId, CancellationToken ct = default)
         => await context.Attendances
             .AsNoTracking()
             .Where(a => a.StudentId == studentId && a.Lesson.GroupId == groupId)
-            .Include(a => a.Lesson)
-            .OrderBy(a => a.Lesson.LessonDate)
             .ToListAsync(ct);
 
     public async Task<IEnumerable<Attendance>> GetByWeekAsync(int groupId, int weekNumber, CancellationToken ct = default)
         => await context.Attendances
             .AsNoTracking()
             .Where(a => a.Lesson.GroupId == groupId && a.Lesson.WeekNumber == weekNumber)
-            .Include(a => a.Lesson)
-            .Include(a => a.Student)
-                .ThenInclude(s => s.User)
             .ToListAsync(ct);
 
     public async Task<bool> AlreadyExistsAsync(int lessonId, int studentId, CancellationToken ct = default)
         => await context.Attendances
             .AnyAsync(a => a.LessonId == lessonId && a.StudentId == studentId, ct);
 
-    public async Task<int> GetTotalScoreByWeekAsync(int studentId, int groupId, int weekNumber, CancellationToken ct = default)
+    public async Task<int> GetPresentCountByWeekAsync(int studentId, int groupId, int weekNumber, CancellationToken ct = default)
         => await context.Attendances
-            .Where(a => a.StudentId == studentId
-                     && a.Lesson.GroupId == groupId
-                     && a.Lesson.WeekNumber == weekNumber)
-            .SumAsync(a => a.Score, ct);
-
-    public async Task<double> GetAverageScoreAsync(int studentId, int groupId, CancellationToken ct = default)
-        => await context.Attendances
-            .Where(a => a.StudentId == studentId && a.Lesson.GroupId == groupId)
-            .AverageAsync(a => (double?)a.Score, ct) ?? 0;
+            .AsNoTracking()
+            .CountAsync(a => a.StudentId == studentId 
+                && a.Lesson.GroupId == groupId 
+                && a.Lesson.WeekNumber == weekNumber 
+                && a.IsPresent, ct);
 
     public async Task<int> GetAbsenceCountAsync(int studentId, int groupId, CancellationToken ct = default)
         => await context.Attendances
-            .CountAsync(a => a.StudentId == studentId
-                          && a.Lesson.GroupId == groupId
-                          && !a.IsPresent, ct);
+            .AsNoTracking()
+            .CountAsync(a => a.StudentId == studentId 
+                && a.Lesson.GroupId == groupId 
+                && !a.IsPresent, ct);
+
+    public async Task<double> GetAttendanceRateAsync(int studentId, int groupId, CancellationToken ct = default)
+    {
+        var total = await context.Attendances
+            .AsNoTracking()
+            .CountAsync(a => a.StudentId == studentId && a.Lesson.GroupId == groupId, ct);
+
+        if (total == 0)
+            return 0;
+
+        var present = await context.Attendances
+            .AsNoTracking()
+            .CountAsync(a => a.StudentId == studentId && a.Lesson.GroupId == groupId && a.IsPresent, ct);
+
+        return (double)present / total * 100;
+    }
 }

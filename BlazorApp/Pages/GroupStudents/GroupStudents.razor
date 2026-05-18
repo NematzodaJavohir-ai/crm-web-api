@@ -1,0 +1,795 @@
+﻿@page "/groupstudents"
+@using Application.Dtos.GroupStudentDto
+@using BlazorApp.ApiServices.Interfaces
+@using BlazorApp.DTOs.GroupDto
+@using BlazorApp.DTOs.GroupStudentDto
+@using BlazorApp.DTOs.StudentDto
+@using BlazorApp.Dtos.GroupStudentDto
+@inject IGroupStudentApiService GroupStudentService
+@inject IStudentApiService StudentService
+@inject IGroupApiService GroupService
+@inject NavigationManager Navigation
+
+<div class="students-page">
+
+   <div class="page-header">
+    <div class="page-header-left">
+        <button class="btn-back" @onclick='() => Navigation.NavigateTo("/groups")'>
+    <i class="bi bi-arrow-left"></i>
+</button>
+        <div>
+            <h1 class="page-title">Group Students</h1>
+            <span class="page-subtitle">Manage students in a group</span>
+        </div>
+    </div>
+</div>
+
+<!-- Выбор группы -->
+<div class="group-selector">
+    <div class="form-group">
+        <label>Select Group</label>
+        <select class="group-select"
+                @bind="selectedGroupId"
+                @bind:after="OnGroupChanged">
+            <option value="0">-- Choose a group --</option>
+            @foreach (var group in allGroups)
+            {
+                <option value="@group.Id">@group.Name</option>
+            }
+        </select>
+    </div>
+</div>
+
+    @if (selectedGroupId > 0)
+    {
+        <div class="header-actions">
+            <button class="btn-secondary" @onclick="OpenBulkModal">
+                <i class="bi bi-people-fill"></i> Bulk Add
+            </button>
+            <button class="btn-create" @onclick="OpenAddModal">
+                <i class="bi bi-plus-lg"></i> Add Student
+            </button>
+        </div>
+
+        @if (stats != null)
+        {
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon purple">
+                        <i class="bi bi-person-check-fill"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value">@stats.ActiveStudents</span>
+                        <span class="stat-label">Active Students</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value">@stats.TotalStudents</span>
+                        <span class="stat-label">Total Enrolled</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="bi bi-bar-chart-fill"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value">@stats.AverageScore.ToString("0.0")</span>
+                        <span class="stat-label">Avg Score</span>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="toolbar">
+            <div class="tab-group">
+                <button class="tab @(activeTab == "active" ? "active" : "")" @onclick='() => activeTab = "active"'>
+                    Active Students
+                    <span class="tab-count">@activeStudents.Count</span>
+                </button>
+                <button class="tab @(activeTab == "available" ? "active" : "")" @onclick='() => { activeTab = "available"; LoadAvailableStudents(); }'>
+                    Available Students
+                    <span class="tab-count">@availableStudents.Count</span>
+                </button>
+                <button class="tab @(activeTab == "history" ? "active" : "")" @onclick='() => { activeTab = "history"; LoadHistory(); }'>
+                    History
+                    <span class="tab-count">@history.Count</span>
+                </button>
+            </div>
+            <div class="search-wrap">
+                <i class="bi bi-search"></i>
+                <input type="text" placeholder="Search students..."
+                       @bind="searchQuery" @bind:event="oninput" />
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="loading-wrap">
+                <div class="spinner"></div>
+                <span>Loading...</span>
+            </div>
+        }
+        else if (activeTab == "active")
+        {
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Student</th>
+                            <th>Email</th>
+                            <th>Joined</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (gs, i) in FilteredActive.Select((s, i) => (s, i)))
+                        {
+                            <tr>
+                                <td class="td-num">@(i + 1)</td>
+                                <td>
+                                    <div class="student-cell">
+                                        <div class="student-avatar">@GetInitials(gs.StudentFullName)</div>
+                                        <div class="student-info">
+                                            <span class="student-name">@gs.StudentFullName</span>
+                                            <span class="student-email">@gs.StudentEmail</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="td-email">@gs.StudentEmail</td>
+                                <td>@gs.JoinedAt.ToString("dd MMM yyyy")</td>
+                                <td>
+                                    <span class="status-badge active">Active</span>
+                                </td>
+                                <td>
+                                    <div class="action-btns">
+                                        <button class="btn-icon btn-transfer" title="Transfer" @onclick="() => OpenTransferModal(gs)">
+                                            <i class="bi bi-arrow-left-right"></i>
+                                        </button>
+                                        <button class="btn-icon btn-delete" title="Remove" @onclick="() => OpenRemoveModal(gs)">
+                                            <i class="bi bi-person-dash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else if (activeTab == "available")
+        {
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Student</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (student, i) in FilteredAvailable.Select((s, i) => (s, i)))
+                        {
+                            <tr>
+                                <td class="td-num">@(i + 1)</td>
+                                <td>
+                                    <div class="student-cell">
+                                        <div class="student-avatar">@GetInitials(student.FullName)</div>
+                                        <div class="student-info">
+                                            <span class="student-name">@student.FullName</span>
+                                            <span class="student-email">@student.Email</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="td-email">@student.Email</td>
+                                <td>@(student.Phone ?? "—")</td>
+                                <td>
+                                    <button class="btn-icon btn-add" title="Add to group" @onclick="() => AddSingleStudent(student.Id)">
+                                        <i class="bi bi-plus-circle"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else if (activeTab == "history")
+        {
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Student</th>
+                            <th>Group</th>
+                            <th>Joined</th>
+                            <th>Left</th>
+                            <th>Status</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (h, i) in FilteredHistory.Select((s, i) => (s, i)))
+                        {
+                            <tr>
+                                <td class="td-num">@(i + 1)</td>
+                                <td>@h.StudentName</td>
+                                <td>@h.GroupName</td>
+                                <td>@h.JoinedAt.ToString("dd MMM yyyy")</td>
+                                <td>@(h.LeftAt?.ToString("dd MMM yyyy") ?? "—")</td>
+                                <td>
+                                    @if (h.IsActive)
+                                    {
+                                        <span class="status-badge active">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge inactive">Left</span>
+                                    }
+                                </td>
+                                <td>@(h.RemoveReason ?? "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="bi bi-collection"></i>
+            <h3>Select a group</h3>
+            <p>Choose a group from the dropdown above to manage its students</p>
+        </div>
+    }
+</div>
+
+@* ADD MODAL *@
+@if (showAddModal)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon create-icon">
+                    <i class="bi bi-person-plus-fill"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Add Student to Group</h2>
+                    <p class="premium-modal-subtitle">Select a student to add</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="premium-form-group full-width">
+                    <label>Select Student <span class="required">*</span></label>
+                    <div class="premium-input-wrapper">
+                        <i class="bi bi-person"></i>
+                        <select @bind="addStudentId">
+                            <option value="0">-- Choose student --</option>
+                            @foreach (var s in availableStudents)
+                            {
+                                <option value="@s.Id">@s.FullName — @s.Email</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="premium-alert error">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        @errorMessage
+                    </div>
+                }
+                <div class="premium-modal-footer">
+                    <button type="button" class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="premium-btn-primary" @onclick="AddStudent" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="premium-spinner"></span>
+                            <span>Adding...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-lg"></i>
+                            <span>Add Student</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* REMOVE MODAL *@
+@if (showRemoveModal && selectedGs != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal premium-modal-sm" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon delete-icon">
+                    <i class="bi bi-person-dash-fill"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Remove Student</h2>
+                    <p class="premium-modal-subtitle">This action can be undone</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="profile-header">
+                    <div class="profile-avatar">@GetInitials(selectedGs.StudentFullName)</div>
+                    <div class="profile-info">
+                        <h3>@selectedGs.StudentFullName</h3>
+                        <span>@selectedGs.StudentEmail</span>
+                    </div>
+                </div>
+                <div class="premium-form-group full-width">
+                    <label>Reason (optional)</label>
+                    <div class="premium-input-wrapper textarea">
+                        <i class="bi bi-chat"></i>
+                        <textarea @bind="removeReason" placeholder="Why is this student being removed?" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="premium-modal-footer">
+                <button class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button class="premium-btn-danger" @onclick="RemoveStudent" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="premium-spinner"></span>
+                        <span>Removing...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-trash3"></i>
+                        <span>Remove Student</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* TRANSFER MODAL *@
+@if (showTransferModal && selectedGs != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal premium-modal-sm" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon edit-icon">
+                    <i class="bi bi-arrow-left-right"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Transfer Student</h2>
+                    <p class="premium-modal-subtitle">Move student to another group</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="profile-header">
+                    <div class="profile-avatar">@GetInitials(selectedGs.StudentFullName)</div>
+                    <div class="profile-info">
+                        <h3>@selectedGs.StudentFullName</h3>
+                        <span>@selectedGs.StudentEmail</span>
+                    </div>
+                </div>
+                <div class="premium-form-group full-width">
+                    <label>Transfer to Group <span class="required">*</span></label>
+                    <div class="premium-input-wrapper">
+                        <i class="bi bi-collection"></i>
+                        <select @bind="transferToGroupId">
+                            <option value="0">-- Select target group --</option>
+                            @foreach (var g in allGroups)
+                            {
+                                @if (g.Id != selectedGroupId)
+                                {
+                                    <option value="@g.Id">@g.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="premium-form-group full-width">
+                    <label>Reason (optional)</label>
+                    <div class="premium-input-wrapper textarea">
+                        <i class="bi bi-chat"></i>
+                        <textarea @bind="transferReason" placeholder="Reason for transfer..." rows="2"></textarea>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="premium-alert error">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        @errorMessage
+                    </div>
+                }
+            </div>
+            <div class="premium-modal-footer">
+                <button class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button class="premium-btn-primary" @onclick="TransferStudent" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="premium-spinner"></span>
+                        <span>Transferring...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-arrow-left-right"></i>
+                        <span>Transfer</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* BULK ADD MODAL *@
+@if (showBulkModal)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon create-icon">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Bulk Add Students</h2>
+                    <p class="premium-modal-subtitle">Select multiple students to add</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                @if (!availableStudents.Any())
+                {
+                    <div class="empty-state-small">
+                        <i class="bi bi-person-x"></i>
+                        <p>No available students to add</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="bulk-list">
+                        @foreach (var s in availableStudents)
+                        {
+                            <label class="bulk-item">
+                                <input type="checkbox" checked="@bulkSelected.Contains(s.Id)" @onchange="e => ToggleBulk(s.Id, (bool)e.Value!)" />
+                                <div class="student-avatar sm">@GetInitials(s.FullName)</div>
+                                <div class="bulk-info">
+                                    <span class="student-name">@s.FullName</span>
+                                    <span class="student-email">@s.Email</span>
+                                </div>
+                            </label>
+                        }
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="premium-alert error">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        @errorMessage
+                    </div>
+                }
+            </div>
+            <div class="premium-modal-footer">
+                <span class="selected-count">@bulkSelected.Count selected</span>
+                <button class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button class="premium-btn-primary" @onclick="BulkAddStudents" disabled="@(isSaving || !bulkSelected.Any())">
+                    @if (isSaving)
+                    {
+                        <span class="premium-spinner"></span>
+                        <span>Adding...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-check-lg"></i>
+                        <span>Add @bulkSelected.Count Students</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<GroupResponseDto> allGroups = new();
+    private List<GroupStudentResponseDto> activeStudents = new();
+    private List<GroupStudentHistoryDto> history = new();
+    private List<StudentResponseDto> availableStudents = new();
+    private GroupStudentStatsDto? stats;
+
+    private int selectedGroupId = 0;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string searchQuery = "";
+    private string activeTab = "active";
+    private string errorMessage = "";
+
+    private bool showAddModal = false;
+    private bool showRemoveModal = false;
+    private bool showTransferModal = false;
+    private bool showBulkModal = false;
+
+    private GroupStudentResponseDto? selectedGs;
+    private int addStudentId = 0;
+    private string removeReason = "";
+    private int transferToGroupId = 0;
+    private string transferReason = "";
+    private HashSet<int> bulkSelected = new();
+
+    private IEnumerable<GroupStudentResponseDto> FilteredActive =>
+        activeStudents.Where(s =>
+            string.IsNullOrEmpty(searchQuery) ||
+            s.StudentFullName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+            s.StudentEmail.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<StudentResponseDto> FilteredAvailable =>
+        availableStudents.Where(s =>
+            string.IsNullOrEmpty(searchQuery) ||
+            s.FullName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+            s.Email.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+
+    private IEnumerable<GroupStudentHistoryDto> FilteredHistory =>
+        history.Where(h =>
+            string.IsNullOrEmpty(searchQuery) ||
+            h.StudentName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGroups();
+    }
+
+    private async Task LoadGroups()
+    {
+        isLoading = true;
+        allGroups = await GroupService.GetAllAsync() ?? new();
+        isLoading = false;
+    }
+
+   private async Task OnGroupChanged()
+{
+    if (selectedGroupId > 0)
+    {
+        await LoadData();
+    }
+}
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        activeStudents = await GroupStudentService.GetActiveByGroupIdAsync(selectedGroupId) ?? new();
+        stats = await GroupStudentService.GetGroupStatsAsync(selectedGroupId);
+        await LoadAvailableStudents();
+        isLoading = false;
+    }
+
+    private async Task LoadAvailableStudents()
+    {
+        var allStudents = await StudentService.GetAllAsync() ?? new();
+        var activeStudentIds = activeStudents.Select(s => s.StudentId).ToHashSet();
+        availableStudents = allStudents.Where(s => !activeStudentIds.Contains(s.Id)).ToList();
+    }
+
+    private async Task LoadHistory()
+    {
+        history = await GroupStudentService.GetGroupHistoryAsync(selectedGroupId) ?? new();
+    }
+
+    private void OpenAddModal()
+    {
+        addStudentId = 0;
+        errorMessage = "";
+        showAddModal = true;
+    }
+
+    private async Task AddSingleStudent(int studentId)
+    {
+        isSaving = true;
+        var dto = new AddStudentToGroupDto { GroupId = selectedGroupId, StudentId = studentId };
+        var result = await GroupStudentService.AddStudentAsync(dto);
+        if (result != null)
+        {
+            await LoadData();
+        }
+        isSaving = false;
+        StateHasChanged();
+    }
+
+    private async Task AddStudent()
+    {
+        if (addStudentId == 0)
+        {
+            errorMessage = "Please select a student";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        var dto = new AddStudentToGroupDto { GroupId = selectedGroupId, StudentId = addStudentId };
+        var result = await GroupStudentService.AddStudentAsync(dto);
+
+        if (result != null)
+        {
+            await LoadData();
+            CloseModals();
+        }
+        else
+        {
+            errorMessage = "Failed to add student. Student may already be in this group.";
+        }
+
+        isSaving = false;
+        StateHasChanged();
+    }
+
+    private void OpenRemoveModal(GroupStudentResponseDto gs)
+    {
+        selectedGs = gs;
+        removeReason = "";
+        showRemoveModal = true;
+    }
+
+    private async Task RemoveStudent()
+    {
+        if (selectedGs == null) return;
+
+        isSaving = true;
+        StateHasChanged();
+
+        var dto = new RemoveStudentFromGroupDto
+        {
+            GroupId = selectedGroupId,
+            StudentId = selectedGs.StudentId,
+            Reason = removeReason
+        };
+
+        var success = await GroupStudentService.RemoveStudentAsync(dto);
+
+        if (success)
+        {
+            await LoadData();
+            CloseModals();
+        }
+        else
+        {
+            errorMessage = "Failed to remove student";
+        }
+
+        isSaving = false;
+        StateHasChanged();
+    }
+
+    private void OpenTransferModal(GroupStudentResponseDto gs)
+    {
+        selectedGs = gs;
+        transferToGroupId = 0;
+        transferReason = "";
+        errorMessage = "";
+        showTransferModal = true;
+    }
+
+    private async Task TransferStudent()
+    {
+        if (transferToGroupId == 0)
+        {
+            errorMessage = "Please select a target group";
+            return;
+        }
+
+        if (selectedGs == null) return;
+
+        isSaving = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        var dto = new TransferStudentDto
+        {
+            StudentId = selectedGs.StudentId,
+            FromGroupId = selectedGroupId,
+            ToGroupId = transferToGroupId,
+            Reason = transferReason
+        };
+
+        var success = await GroupStudentService.TransferStudentAsync(dto);
+
+        if (success)
+        {
+            await LoadData();
+            CloseModals();
+        }
+        else
+        {
+            errorMessage = "Transfer failed. Check group capacity or status.";
+        }
+
+        isSaving = false;
+        StateHasChanged();
+    }
+
+    private void OpenBulkModal()
+    {
+        bulkSelected = new();
+        errorMessage = "";
+        showBulkModal = true;
+    }
+
+    private async Task BulkAddStudents()
+    {
+        if (!bulkSelected.Any())
+        {
+            errorMessage = "Please select at least one student";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        var dto = new BulkAddStudentsDto
+        {
+            GroupId = selectedGroupId,
+            StudentIds = bulkSelected.ToList()
+        };
+
+        var success = await GroupStudentService.BulkAddStudentsAsync(dto);
+
+        if (success)
+        {
+            await LoadData();
+            CloseModals();
+        }
+        else
+        {
+            errorMessage = "Some students could not be added.";
+        }
+
+        isSaving = false;
+        StateHasChanged();
+    }
+
+    private void ToggleBulk(int id, bool isChecked)
+    {
+        if (isChecked)
+            bulkSelected.Add(id);
+        else
+            bulkSelected.Remove(id);
+    }
+
+    private void CloseModals()
+    {
+        showAddModal = false;
+        showRemoveModal = false;
+        showTransferModal = false;
+        showBulkModal = false;
+        selectedGs = null;
+        errorMessage = "";
+    }
+
+    private string GetInitials(string fullName)
+    {
+        if (string.IsNullOrEmpty(fullName)) return "?";
+        var parts = fullName.Trim().Split(' ');
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return fullName.Length > 0 ? fullName[0].ToString().ToUpper() : "?";
+    }
+}

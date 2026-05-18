@@ -13,20 +13,34 @@ public class UnitOfWork(
     ILessonRepository lessons,
     IAttendanceRepository attendances,
     IWeekResultRepository weekResults,
+    IGroupStudentRepository groupStudents,
     IUserRepository users,
     //INotificationRepository notifications,
-    IGroupStudentRepository groupStudents) : IUnitOfWork
+    IAuditLogRepository auditLogs,
+    IHomeworkRepository homeworks,
+    ILessonScoreRepository lessonScores,
+    IPaymentRepository payments,
+    IProfileRepository profiles,
+    ISheduleRepository shedules,
+    IStudentProgressRepository studentProgresses) : IUnitOfWork
 {
     public IGroupRepository Groups => groups;
-    public ICourseRepository Courses => courses;
     public IStudentRepository Students => students;
     public IMentorRepository Mentors => mentors;
+    public ICourseRepository Courses => courses;
     public ILessonRepository Lessons => lessons;
     public IAttendanceRepository Attendances => attendances;
     public IWeekResultRepository WeekResults => weekResults;
     public IGroupStudentRepository GroupStudents => groupStudents;
     public IUserRepository Users => users;
     //public INotificationRepository Notifications => notifications;
+    public IAuditLogRepository AuditLogs => auditLogs;
+    public IHomeworkRepository Homeworks => homeworks;
+    public ILessonScoreRepository LessonScores => lessonScores;
+    public IPaymentRepository Payments => payments;
+    public IProfileRepository Profiles => profiles;
+    public ISheduleRepository Shedules => shedules;
+    public IStudentProgressRepository StudentProgresses => studentProgresses;
 
     public async Task<int> SaveChangesAsync(CancellationToken ct = default)
         => await context.SaveChangesAsync(ct);

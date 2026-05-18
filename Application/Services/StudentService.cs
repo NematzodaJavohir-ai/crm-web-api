@@ -1,4 +1,5 @@
 using Application.Dtos.GroupDto;
+using Application.Dtos.PaymentDto;
 using Application.Dtos.StudentDto;
 using Application.Dtos.WeeklyResultDto;
 using Application.Interfaces.Service;
@@ -10,646 +11,330 @@ using Microsoft.Extensions.Logging;
 
 namespace Application.Services;
 
-public class StudentService(IUnitOfWork _uow,ICacheService _cacheService,ILogger<StudentService> _logger) : IStudentService
+public class StudentService(IUnitOfWork uow, ICacheService cacheService, ILogger<StudentService> logger) : IStudentService
 {
     public async Task<Result<StudentResponseDto>> CreateAsync(StudentCreateDto dto, CancellationToken ct = default)
     {
-        try
+        logger.LogInformation("Creating new student with email: {Email}", dto.Email);
+
+        var emailExists = await uow.Users.EmailExistsAsync(dto.Email, ct);
+        if (emailExists)
+            return Result<StudentResponseDto>.Fail("Email already exists", ErrorType.Conflict);
+
+        var user = new User
         {
-            _logger.LogInformation("Creating new student with email: {Email}", dto.Email);
+            FirstName = dto.FirstName,
+            LastName = dto.LastName,
+            Email = dto.Email,
+            PhoneNumber = dto.Phone ?? string.Empty,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+            RoleId = (int)UserRole.Student,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
 
-            var emailExists = await _uow.Users.EmailExistsAsync(dto.Email, ct);
-            if (emailExists)
-            {
-                _logger.LogWarning("Email {Email} already exists", dto.Email);
-                return Result<StudentResponseDto>.Fail("Email already exists", ErrorType.Conflict);
-            }
+        await uow.Users.AddUserAsync(user, ct);
+        await uow.SaveChangesAsync(ct);
 
-            var nameParts = dto.FullName.Trim().Split(' ', 2);
-            var firstName = nameParts[0];
-            var lastName = nameParts.Length > 1 ? nameParts[1] : string.Empty;
-
-            var user = new User
-            {
-                FirstName = firstName,
-                LastName = lastName,
-                Email = dto.Email,
-                PhoneNumber = dto.Phone ?? string.Empty,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                PhotoUrl = dto.PhotoUrl,
-                RoleId = (int)UserRole.Student,
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            await _uow.Users.AddUserAsync(user, ct);
-            await _uow.SaveChangesAsync(ct);
-
-            var student = new Student
-            {
-                UserId = user.Id,
-                Phone = dto.Phone,
-                DateOfBirth = dto.DateOfBirth,
-                TelegramUsername = dto.TelegramUsername,
-                GithubUrl = dto.GithubUrl,
-                AboutMe = dto.AboutMe,
-                EnrollDate = DateTime.UtcNow
-            };
-
-            await _uow.Students.AddAsync(student, ct);
-            await _uow.SaveChangesAsync(ct);
-
-            _logger.LogInformation("Successfully created student with ID: {StudentId}", student.Id);
-
-            var response = MapToResponseDto(student, user);
-            
-            // Cache the newly created student
-            var cacheKey = GetStudentCacheKey(student.Id);
-            await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromMinutes(10));
-            
-            return Result<StudentResponseDto>.Ok(response);
-        }
-        catch (Exception ex)
+        var student = new Student
         {
-            _logger.LogError(ex, "Error creating student with email: {Email}", dto.Email);
-            return Result<StudentResponseDto>.Fail("An error occurred while creating the student", ErrorType.Unknown);
-        }
+            UserId = user.Id,
+            Phone = dto.Phone,
+            DateOfBirth = dto.DateOfBirth,
+            Balance = 0,
+            IsActive = true,
+            EnrollDate = DateTime.UtcNow
+        };
+
+        await uow.Students.AddAsync(student, ct);
+        await uow.SaveChangesAsync(ct);
+
+        logger.LogInformation("Student created with ID: {StudentId}", student.Id);
+
+        return Result<StudentResponseDto>.Ok(MapToResponseDto(student, user));
     }
 
     public async Task<Result<StudentResponseDto>> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        try
-        {
-            if (id <= 0)
-            {
-                _logger.LogWarning("Invalid student ID: {Id}", id);
-                return Result<StudentResponseDto>.Fail("Invalid student ID", ErrorType.Validation);
-            }
+        var student = await uow.Students.GetByIdAsync(id, ct);
+        if (student is null)
+            return Result<StudentResponseDto>.Fail("Student not found", ErrorType.NotFound);
 
-            var cacheKey = GetStudentCacheKey(id);
-            
-            // Try to get from cache
-            var cachedStudent = await _cacheService.GetAsync<StudentResponseDto>(cacheKey);
-            if (cachedStudent != null)
-            {
-                _logger.LogDebug("Student {Id} retrieved from cache", id);
-                return Result<StudentResponseDto>.Ok(cachedStudent);
-            }
-
-            _logger.LogDebug("Student {Id} not found in cache, retrieving from database", id);
-
-            var student = await _uow.Students.GetWithUserAsync(id, ct);
-            if (student is null)
-            {
-                _logger.LogWarning("Student with ID {Id} not found", id);
-                return Result<StudentResponseDto>.Fail($"Student with ID {id} not found", ErrorType.NotFound);
-            }
-
-            if (student.User is null)
-            {
-                _logger.LogError("Student user data is corrupted for student ID: {Id}", id);
-                return Result<StudentResponseDto>.Fail("Student user data is corrupted", ErrorType.NotFound);
-            }
-
-            var response = MapToResponseDto(student, student.User);
-            
-            // Cache the result
-            await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromMinutes(10));
-            _logger.LogDebug("Student {Id} cached successfully", id);
-
-            return Result<StudentResponseDto>.Ok(response);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving student by ID: {Id}", id);
-            return Result<StudentResponseDto>.Fail("An error occurred while retrieving the student", ErrorType.Unknown);
-        }
+        return Result<StudentResponseDto>.Ok(MapToResponseDto(student, student.User));
     }
 
     public async Task<Result<StudentResponseDto>> UpdateAsync(int id, StudentUpdateDto dto, CancellationToken ct = default)
     {
-        try
-        {
-            _logger.LogInformation("Updating student with ID: {Id}", id);
+        var student = await uow.Students.GetByIdAsync(id, ct);
+        if (student is null)
+            return Result<StudentResponseDto>.Fail("Student not found", ErrorType.NotFound);
 
-            var student = await _uow.Students.GetByIdAsync(id, ct);
-            if (student is null)
-            {
-                _logger.LogWarning("Student with ID {Id} not found for update", id);
-                return Result<StudentResponseDto>.Fail("Student not found", ErrorType.NotFound);
-            }
+        var user = await uow.Users.GetUserByIdAsync(student.UserId, ct);
+        if (user is null)
+            return Result<StudentResponseDto>.Fail("User not found", ErrorType.NotFound);
 
-            var user = await _uow.Users.GetUserByIdAsync(student.UserId, ct);
-            if (user is null)
-            {
-                _logger.LogError("User not found for student ID: {Id}", id);
-                return Result<StudentResponseDto>.Fail("User not found", ErrorType.NotFound);
-            }
+        if (dto.FirstName is not null) user.FirstName = dto.FirstName;
+        if (dto.LastName is not null) user.LastName = dto.LastName;
+        if (dto.Phone is not null) { student.Phone = dto.Phone; user.PhoneNumber = dto.Phone; }
+        if (dto.DateOfBirth.HasValue) student.DateOfBirth = dto.DateOfBirth;
+        if (dto.PhotoUrl is not null) user.PhotoUrl = dto.PhotoUrl;
+        if (dto.TelegramUsername is not null) student.TelegramUsername = dto.TelegramUsername;
+        if (dto.GithubUrl is not null) student.GithubUrl = dto.GithubUrl;
+        if (dto.AboutMe is not null) student.AboutMe = dto.AboutMe;
 
-            // Update fields
-            if (dto.Phone is not null)
-            {
-                student.Phone = dto.Phone;
-                user.PhoneNumber = dto.Phone;
-            }
+        user.UpdatedAt = DateTime.UtcNow;
 
-            if (dto.DateOfBirth.HasValue) student.DateOfBirth = dto.DateOfBirth;
-            if (dto.TelegramUsername is not null) student.TelegramUsername = dto.TelegramUsername;
-            if (dto.GithubUrl is not null) student.GithubUrl = dto.GithubUrl;
-            if (dto.AboutMe is not null) student.AboutMe = dto.AboutMe;
+        uow.Students.Update(student);
+        await uow.Users.UpdateUserAsync(user);
+        await uow.SaveChangesAsync(ct);
 
-            user.UpdatedAt = DateTime.UtcNow;
-
-            _uow.Students.Update(student);
-            await _uow.Users.UpdateUserAsync(user);
-            await _uow.SaveChangesAsync(ct);
-
-            // Invalidate cache
-            var cacheKey = GetStudentCacheKey(id);
-            await _cacheService.RemoveAsync(cacheKey);
-            await InvalidateStudentListCacheAsync();
-
-            _logger.LogInformation("Successfully updated student with ID: {Id}", id);
-
-            var response = MapToResponseDto(student, user);
-            
-            // Cache the updated student
-            await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromMinutes(10));
-
-            return Result<StudentResponseDto>.Ok(response);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating student with ID: {Id}", id);
-            return Result<StudentResponseDto>.Fail("An error occurred while updating the student", ErrorType.Unknown);
-        }
+        return Result<StudentResponseDto>.Ok(MapToResponseDto(student, user));
     }
 
     public async Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default)
     {
-        try
-        {
-            _logger.LogInformation("Deleting student with ID: {Id}", id);
+        var student = await uow.Students.GetByIdAsync(id, ct);
+        if (student is null)
+            return Result<bool>.Fail("Student not found", ErrorType.NotFound);
 
-            var student = await _uow.Students.GetWithUserAsync(id, ct);
-            if (student is null)
-            {
-                _logger.LogWarning("Student with ID {Id} not found for deletion", id);
-                return Result<bool>.Fail("Student not found", ErrorType.NotFound);
-            }
+        uow.Students.Delete(student);
+        await uow.Users.DeleteUserAsync(student.UserId);
+        await uow.SaveChangesAsync(ct);
 
-            _uow.Students.Delete(student);
-            await _uow.Users.DeleteUserAsync(student.UserId);
-            await _uow.SaveChangesAsync(ct);
-
-            // Invalidate cache
-            var cacheKey = GetStudentCacheKey(id);
-            await _cacheService.RemoveAsync(cacheKey);
-            await InvalidateStudentListCacheAsync();
-            await InvalidateStudentGroupCacheAsync(id);
-
-            _logger.LogInformation("Successfully deleted student with ID: {Id}", id);
-
-            return Result<bool>.Ok(true);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting student with ID: {Id}", id);
-            return Result<bool>.Fail("An error occurred while deleting the student", ErrorType.Unknown);
-        }
+        return Result<bool>.Ok(true);
     }
 
     public async Task<Result<IEnumerable<StudentResponseDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        try
-        {
-            _logger.LogDebug("Retrieving all students");
+        var students = await uow.Students.GetAllAsync(ct);
+        return Result<IEnumerable<StudentResponseDto>>.Ok(students.Select(s => MapToResponseDto(s, s.User)));
+    }
 
-            var cacheKey = "all_students";
-            
-            // Try to get from cache
-            var cachedStudents = await _cacheService.GetAsync<IEnumerable<StudentResponseDto>>(cacheKey);
-            if (cachedStudents != null)
-            {
-                _logger.LogDebug("All students retrieved from cache");
-                return Result<IEnumerable<StudentResponseDto>>.Ok(cachedStudents);
-            }
-
-            var students = await _uow.Students.GetAllAsync(ct);
-            var result = students.Select(s => MapToResponseDto(s, s.User)).ToList();
-
-            // Cache the result
-            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5));
-            _logger.LogDebug("All students cached successfully, count: {Count}", result.Count);
-
-            return Result<IEnumerable<StudentResponseDto>>.Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving all students");
-            return Result<IEnumerable<StudentResponseDto>>.Fail("An error occurred while retrieving students", ErrorType.Unknown);
-        }
+    public async Task<Result<IEnumerable<StudentResponseDto>>> GetActiveAsync(CancellationToken ct = default)
+    {
+        var students = await uow.Students.GetAllAsync(ct);
+        return Result<IEnumerable<StudentResponseDto>>.Ok(students.Where(s => s.IsActive).Select(s => MapToResponseDto(s, s.User)));
     }
 
     public async Task<Result<StudentResponseDto>> SetActiveAsync(int id, bool isActive, CancellationToken ct = default)
     {
-        try
-        {
-            _logger.LogInformation("Setting active status to {IsActive} for student ID: {Id}", isActive, id);
+        var student = await uow.Students.GetByIdAsync(id, ct);
+        if (student is null)
+            return Result<StudentResponseDto>.Fail("Student not found", ErrorType.NotFound);
 
-            var student = await _uow.Students.GetWithUserAsync(id, ct);
-            if (student is null)
-            {
-                _logger.LogWarning("Student with ID {Id} not found", id);
-                return Result<StudentResponseDto>.Fail("Student not found", ErrorType.NotFound);
-            }
+        student.IsActive = isActive;
+        student.User.IsActive = isActive;
 
-            if (student.User.IsActive == isActive)
-            {
-                _logger.LogWarning("Student {Id} is already {Status}", id, isActive ? "active" : "inactive");
-                return Result<StudentResponseDto>.Fail($"Student is already {(isActive ? "active" : "inactive")}", ErrorType.Validation);
-            }
+        uow.Students.Update(student);
+        await uow.SaveChangesAsync(ct);
 
-            student.User.IsActive = isActive;
-
-            _uow.Students.Update(student);
-            await _uow.Users.UpdateUserAsync(student.User);
-            await _uow.SaveChangesAsync(ct);
-
-            // Invalidate cache
-            var cacheKey = GetStudentCacheKey(id);
-            await _cacheService.RemoveAsync(cacheKey);
-            await InvalidateStudentListCacheAsync();
-
-            _logger.LogInformation("Successfully set active status for student ID: {Id}", id);
-
-            var response = MapToResponseDto(student, student.User);
-            await _cacheService.SetAsync(cacheKey, response, TimeSpan.FromMinutes(10));
-
-            return Result<StudentResponseDto>.Ok(response);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error setting active status for student ID: {Id}", id);
-            return Result<StudentResponseDto>.Fail("An error occurred while updating student status", ErrorType.Unknown);
-        }
+        return Result<StudentResponseDto>.Ok(MapToResponseDto(student, student.User));
     }
 
     public async Task<Result<IEnumerable<StudentResponseDto>>> GetByGroupIdAsync(int groupId, CancellationToken ct = default)
     {
-        try
-        {
-            if (groupId <= 0)
-            {
-                _logger.LogWarning("Invalid group ID: {GroupId}", groupId);
-                return Result<IEnumerable<StudentResponseDto>>.Fail("Invalid group ID", ErrorType.Validation);
-            }
-
-            _logger.LogDebug("Retrieving students for group ID: {GroupId}", groupId);
-
-            var group = await _uow.Groups.GetByIdAsync(groupId, ct);
-            if (group is null)
-            {
-                _logger.LogWarning("Group with ID {GroupId} not found", groupId);
-                return Result<IEnumerable<StudentResponseDto>>.Fail("Group not found", ErrorType.NotFound);
-            }
-
-            var cacheKey = $"group_students_{groupId}";
-            
-            var cachedStudents = await _cacheService.GetAsync<IEnumerable<StudentResponseDto>>(cacheKey);
-            if (cachedStudents != null)
-            {
-                _logger.LogDebug("Students for group {GroupId} retrieved from cache", groupId);
-                return Result<IEnumerable<StudentResponseDto>>.Ok(cachedStudents);
-            }
-
-            var students = await _uow.Students.GetByGroupIdAsync(groupId, ct);
-            var result = students.Select(s => MapToResponseDto(s, s.User)).ToList();
-
-            await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5));
-            _logger.LogDebug("Students for group {GroupId} cached successfully, count: {Count}", groupId, result.Count);
-
-            return Result<IEnumerable<StudentResponseDto>>.Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving students for group ID: {GroupId}", groupId);
-            return Result<IEnumerable<StudentResponseDto>>.Fail("An error occurred while retrieving group students", ErrorType.Unknown);
-        }
+        var students = await uow.Students.GetByGroupIdAsync(groupId, ct);
+        return Result<IEnumerable<StudentResponseDto>>.Ok(students.Select(s => MapToResponseDto(s, s.User)));
     }
 
     public async Task<Result<StudentWithGroupsDto>> GetWithGroupsAsync(int id, CancellationToken ct = default)
     {
-        try
+        var student = await uow.Students.GetWithGroupsAsync(id, ct);
+        if (student is null)
+            return Result<StudentWithGroupsDto>.Fail("Student not found", ErrorType.NotFound);
+
+        return Result<StudentWithGroupsDto>.Ok(new StudentWithGroupsDto
         {
-            if (id <= 0)
-            {
-                _logger.LogWarning("Invalid student ID: {Id}", id);
-                return Result<StudentWithGroupsDto>.Fail("Invalid student ID", ErrorType.Validation);
-            }
+            Id = student.Id,
+            UserId = student.UserId,
+            FullName = $"{student.User.FirstName} {student.User.LastName}",
+            Email = student.User.Email,
+            Phone = student.Phone,
+            PhotoUrl = student.User.PhotoUrl,
+            TelegramUsername = student.TelegramUsername,
+            GithubUrl = student.GithubUrl,
+            AboutMe = student.AboutMe,
+            DateOfBirth = student.DateOfBirth,
+            Balance = student.Balance,
+            IsActive = student.IsActive,
+            EnrollDate = student.EnrollDate,
+            Groups = student.GroupStudents
+                .Where(gs => gs.IsActive)
+                .Select(gs => new GroupShortDto
+                {
+                    Id = gs.Group.Id,
+                    Name = gs.Group.Name,
+                    CourseName = gs.Group.Course?.Name ?? "",
+                    MentorName = gs.Group.Mentor?.User != null
+                        ? $"{gs.Group.Mentor.User.FirstName} {gs.Group.Mentor.User.LastName}"
+                        : "",
+                    Status = gs.Group.Status.ToString(),
+                    StudentCount = gs.Group.GroupStudents.Count(x => x.IsActive),
+                    StartDate = gs.Group.StartDate
+                })
+        });
+    }
 
-            var cacheKey = $"student_with_groups_{id}";
-            
-            var cachedDto = await _cacheService.GetAsync<StudentWithGroupsDto>(cacheKey);
-            if (cachedDto != null)
-            {
-                _logger.LogDebug("Student with groups for ID {Id} retrieved from cache", id);
-                return Result<StudentWithGroupsDto>.Ok(cachedDto);
-            }
+    public async Task<Result<StudentWithPaymentsDto>> GetWithPaymentsAsync(int id, CancellationToken ct = default)
+    {
+        var student = await uow.Students.GetWithPaymentsAsync(id, ct);
+        if (student is null)
+            return Result<StudentWithPaymentsDto>.Fail("Student not found", ErrorType.NotFound);
 
-            var student = await _uow.Students.GetWithGroupsAsync(id, ct);
-            if (student is null)
-            {
-                _logger.LogWarning("Student with ID {Id} not found", id);
-                return Result<StudentWithGroupsDto>.Fail("Student not found", ErrorType.NotFound);
-            }
-
-            var dto = new StudentWithGroupsDto
-            {
-                Id = student.Id,
-                UserId = student.UserId,
-                FullName = $"{student.User.FirstName} {student.User.LastName}",
-                Email = student.User.Email,
-                Phone = student.Phone,
-                PhotoUrl = student.User.PhotoUrl,
-                TelegramUsername = student.TelegramUsername,
-                GithubUrl = student.GithubUrl,
-                AboutMe = student.AboutMe,
-                DateOfBirth = student.DateOfBirth,
-                EnrollDate = student.EnrollDate,
-                Groups = student.GroupStudents
-                    .Where(gs => gs.IsActive)
-                    .Select(gs => new GroupShortDto
-                    {
-                        Id = gs.Group.Id,
-                        Name = gs.Group.Name,
-                        CourseName = gs.Group.Course.Name,
-                        MentorName = $"{gs.Group.Mentor.User.FirstName} {gs.Group.Mentor.User.LastName}",
-                        Status = gs.Group.Status
-                    })
-            };
-
-            await _cacheService.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(10));
-            _logger.LogDebug("Student with groups for ID {Id} cached successfully", id);
-
-            return Result<StudentWithGroupsDto>.Ok(dto);
-        }
-        catch (Exception ex)
+        return Result<StudentWithPaymentsDto>.Ok(new StudentWithPaymentsDto
         {
-            _logger.LogError(ex, "Error retrieving student with groups for ID: {Id}", id);
-            return Result<StudentWithGroupsDto>.Fail("An error occurred while retrieving student groups", ErrorType.Unknown);
-        }
+            Id = student.Id,
+            UserId = student.UserId,
+            FullName = $"{student.User.FirstName} {student.User.LastName}",
+            Email = student.User.Email,
+            Phone = student.Phone,
+            PhotoUrl = student.User.PhotoUrl,
+            Balance = student.Balance,
+            Payments = student.Payments.Select(p => new PaymentShortDto
+            {
+                Id = p.Id,
+                Amount = p.Amount,
+                Type = p.Type.ToString(),
+                Method = p.Method.ToString(),
+                Date = p.Date,
+                IsConfirmed = p.IsConfirmed,
+                GroupName = p.Group?.Name
+            })
+        });
     }
 
     public async Task<Result<StudentFullProfileDto>> GetFullProfileAsync(int id, CancellationToken ct = default)
     {
-        try
+        var student = await uow.Students.GetWithGroupsAsync(id, ct);
+        if (student is null)
+            return Result<StudentFullProfileDto>.Fail("Student not found", ErrorType.NotFound);
+
+        return Result<StudentFullProfileDto>.Ok(new StudentFullProfileDto
         {
-            if (id <= 0)
+            Id = student.Id,
+            UserId = student.UserId,
+            FullName = $"{student.User.FirstName} {student.User.LastName}",
+            Email = student.User.Email,
+            Phone = student.Phone,
+            PhotoUrl = student.User.PhotoUrl,
+            TelegramUsername = student.TelegramUsername,
+            GithubUrl = student.GithubUrl,
+            AboutMe = student.AboutMe,
+            DateOfBirth = student.DateOfBirth,
+            Balance = student.Balance,
+            IsActive = student.IsActive,
+            EnrollDate = student.EnrollDate,
+            TotalGroups = student.GroupStudents.Count,
+            ActiveGroups = student.GroupStudents.Count(gs => gs.IsActive),
+            Groups = student.GroupStudents.Select(gs => new GroupShortDto
             {
-                _logger.LogWarning("Invalid student ID: {Id}", id);
-                return Result<StudentFullProfileDto>.Fail("Invalid student ID", ErrorType.Validation);
-            }
+                Id = gs.Group.Id,
+                Name = gs.Group.Name,
+                CourseName = gs.Group.Course?.Name ?? "",
+                MentorName = gs.Group.Mentor?.User != null
+                    ? $"{gs.Group.Mentor.User.FirstName} {gs.Group.Mentor.User.LastName}"
+                    : "",
+                Status = gs.Group.Status.ToString(),
+                StudentCount = gs.Group.GroupStudents.Count(x => x.IsActive),
+                StartDate = gs.Group.StartDate
+            })
+        });
+    }
 
-            var cacheKey = $"student_full_profile_{id}";
-            
-            var cachedProfile = await _cacheService.GetAsync<StudentFullProfileDto>(cacheKey);
-            if (cachedProfile != null)
-            {
-                _logger.LogDebug("Full profile for student {Id} retrieved from cache", id);
-                return Result<StudentFullProfileDto>.Ok(cachedProfile);
-            }
+    public async Task<Result<decimal>> GetBalanceAsync(int id, CancellationToken ct = default)
+    {
+        var balance = await uow.Students.GetBalanceAsync(id, ct);
+        return Result<decimal>.Ok(balance);
+    }
 
-            var student = await _uow.Students.GetFullProfileAsync(id, ct);
-            if (student is null)
-            {
-                _logger.LogWarning("Student with ID {Id} not found", id);
-                return Result<StudentFullProfileDto>.Fail("Student not found", ErrorType.NotFound);
-            }
+    public async Task<Result<bool>> AddToBalanceAsync(int id, decimal amount, CancellationToken ct = default)
+    {
+        await uow.Students.UpdateBalanceAsync(id, amount, ct);
+        await uow.SaveChangesAsync(ct);
+        return Result<bool>.Ok(true);
+    }
 
-            var averageScore = await _uow.WeekResults.GetAverageScoreAsync(student.Id, 0, ct);
-            var totalAbsences = student.Attendances.Count(a => !a.IsPresent);
+    public async Task<Result<bool>> DeductFromBalanceAsync(int id, decimal amount, CancellationToken ct = default)
+    {
+        await uow.Students.UpdateBalanceAsync(id, -amount, ct);
+        await uow.SaveChangesAsync(ct);
+        return Result<bool>.Ok(true);
+    }
 
-            var dto = MapToFullProfileDto(student, averageScore, totalAbsences);
-
-            await _cacheService.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(5));
-            _logger.LogDebug("Full profile for student {Id} cached successfully", id);
-
-            return Result<StudentFullProfileDto>.Ok(dto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving full profile for student ID: {Id}", id);
-            return Result<StudentFullProfileDto>.Fail("An error occurred while retrieving student profile", ErrorType.Unknown);
-        }
+    public async Task<Result<IEnumerable<StudentResponseDto>>> GetDebtorsAsync(CancellationToken ct = default)
+    {
+        var students = await uow.Students.GetDebtorsAsync(ct);
+        return Result<IEnumerable<StudentResponseDto>>.Ok(students.Select(s => MapToResponseDto(s, s.User)));
     }
 
     public async Task<Result<StudentResponseDto>> GetMyProfileAsync(int userId, CancellationToken ct = default)
     {
-        try
-        {
-            if (userId <= 0)
-            {
-                _logger.LogWarning("Invalid user ID: {UserId}", userId);
-                return Result<StudentResponseDto>.Fail("Invalid user ID", ErrorType.Validation);
-            }
+        var student = await uow.Students.GetByUserIdAsync(userId, ct);
+        if (student is null)
+            return Result<StudentResponseDto>.Fail("Student not found", ErrorType.NotFound);
 
-            _logger.LogDebug("Retrieving profile for user ID: {UserId}", userId);
-
-            var student = await _uow.Students.GetByUserIdAsync(userId, ct);
-            if (student is null)
-            {
-                _logger.LogWarning("Student not found for user ID: {UserId}", userId);
-                return Result<StudentResponseDto>.Fail("Student not found", ErrorType.NotFound);
-            }
-
-            var user = await _uow.Users.GetUserByIdAsync(student.UserId, ct);
-            if (user is null)
-            {
-                _logger.LogError("User not found for student with user ID: {UserId}", userId);
-                return Result<StudentResponseDto>.Fail("User not found", ErrorType.NotFound);
-            }
-
-            return Result<StudentResponseDto>.Ok(MapToResponseDto(student, user));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving profile for user ID: {UserId}", userId);
-            return Result<StudentResponseDto>.Fail("An error occurred while retrieving profile", ErrorType.Unknown);
-        }
-    }
-
-    public async Task<Result<StudentResponseDto>> UpdateMyProfileAsync(int userId, StudentUpdateDto dto, CancellationToken ct = default)
-    {
-        try
-        {
-            if (userId <= 0)
-            {
-                _logger.LogWarning("Invalid user ID: {UserId}", userId);
-                return Result<StudentResponseDto>.Fail("Invalid user ID", ErrorType.Validation);
-            }
-
-            _logger.LogInformation("Updating profile for user ID: {UserId}", userId);
-
-            var student = await _uow.Students.GetByUserIdAsync(userId, ct);
-            if (student is null)
-            {
-                _logger.LogWarning("Student not found for user ID: {UserId}", userId);
-                return Result<StudentResponseDto>.Fail("Student not found", ErrorType.NotFound);
-            }
-
-            var user = await _uow.Users.GetUserByIdAsync(student.UserId, ct);
-            if (user is null)
-            {
-                _logger.LogError("User not found for student with user ID: {UserId}", userId);
-                return Result<StudentResponseDto>.Fail("User not found", ErrorType.NotFound);
-            }
-
-            if (dto.Phone is not null)
-            {
-                var phoneExists = await _uow.Users.PhoneExistsAsync(dto.Phone, ct);
-                if (phoneExists)
-                {
-                    _logger.LogWarning("Phone number {Phone} already exists for another user", dto.Phone);
-                    return Result<StudentResponseDto>.Fail("Phone number already exists", ErrorType.Conflict);
-                }
-
-                student.Phone = dto.Phone;
-                user.PhoneNumber = dto.Phone;
-            }
-
-            if (dto.DateOfBirth.HasValue) student.DateOfBirth = dto.DateOfBirth;
-            if (dto.TelegramUsername is not null) student.TelegramUsername = dto.TelegramUsername;
-            if (dto.GithubUrl is not null) student.GithubUrl = dto.GithubUrl;
-            if (dto.AboutMe is not null) student.AboutMe = dto.AboutMe;
-
-            user.UpdatedAt = DateTime.UtcNow;
-
-            _uow.Students.Update(student);
-            await _uow.Users.UpdateUserAsync(user);
-            await _uow.SaveChangesAsync(ct);
-
-            // Invalidate cache
-            var cacheKey = GetStudentCacheKey(student.Id);
-            await _cacheService.RemoveAsync(cacheKey);
-            await InvalidateStudentListCacheAsync();
-
-            _logger.LogInformation("Successfully updated profile for user ID: {UserId}", userId);
-
-            return Result<StudentResponseDto>.Ok(MapToResponseDto(student, user));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating profile for user ID: {UserId}", userId);
-            return Result<StudentResponseDto>.Fail("An error occurred while updating profile", ErrorType.Unknown);
-        }
+        return Result<StudentResponseDto>.Ok(MapToResponseDto(student, student.User));
     }
 
     public async Task<Result<StudentFullProfileDto>> GetMyFullProfileAsync(int userId, CancellationToken ct = default)
     {
-        try
+        var student = await uow.Students.GetByUserIdAsync(userId, ct);
+        if (student is null)
+            return Result<StudentFullProfileDto>.Fail("Student not found", ErrorType.NotFound);
+
+        return await GetFullProfileAsync(student.Id, ct);
+    }
+
+    public async Task<Result<StudentResponseDto>> UpdateMyProfileAsync(int userId, StudentUpdateDto dto, CancellationToken ct = default)
+    {
+        var student = await uow.Students.GetByUserIdAsync(userId, ct);
+        if (student is null)
+            return Result<StudentResponseDto>.Fail("Student not found", ErrorType.NotFound);
+
+        return await UpdateAsync(student.Id, dto, ct);
+    }
+
+    public async Task<Result<IEnumerable<StudentShortDto>>> GetLookupAsync(CancellationToken ct = default)
+    {
+        var students = await uow.Students.GetAllAsync(ct);
+        return Result<IEnumerable<StudentShortDto>>.Ok(students.Select(s => new StudentShortDto
         {
-            if (userId <= 0)
-            {
-                _logger.LogWarning("Invalid user ID: {UserId}", userId);
-                return Result<StudentFullProfileDto>.Fail("Invalid user ID", ErrorType.Validation);
-            }
+            Id = s.Id,
+            FullName = $"{s.User.FirstName} {s.User.LastName}",
+            Email = s.User.Email,
+            PhotoUrl = s.User.PhotoUrl,
+            ActiveGroupsCount = s.GroupStudents.Count(gs => gs.IsActive)
+        }));
+    }
 
-            _logger.LogDebug("Retrieving full profile for user ID: {UserId}", userId);
-
-            var student = await _uow.Students.GetFullProfileAsync(userId, ct);
-            if (student is null)
-            {
-                _logger.LogWarning("Student not found for user ID: {UserId}", userId);
-                return Result<StudentFullProfileDto>.Fail("Student not found", ErrorType.NotFound);
-            }
-
-            var averageScore = await _uow.WeekResults.GetAverageScoreAsync(student.Id, 0, ct);
-            var totalAbsences = student.Attendances.Count(a => !a.IsPresent);
-
-            var dto = MapToFullProfileDto(student, averageScore, totalAbsences);
-
-            return Result<StudentFullProfileDto>.Ok(dto);
-        }
-        catch (Exception ex)
+    public async Task<Result<IEnumerable<StudentShortDto>>> GetLookupByGroupIdAsync(int groupId, CancellationToken ct = default)
+    {
+        var students = await uow.Students.GetByGroupIdAsync(groupId, ct);
+        return Result<IEnumerable<StudentShortDto>>.Ok(students.Select(s => new StudentShortDto
         {
-            _logger.LogError(ex, "Error retrieving full profile for user ID: {UserId}", userId);
-            return Result<StudentFullProfileDto>.Fail("An error occurred while retrieving full profile", ErrorType.Unknown);
-        }
+            Id = s.Id,
+            FullName = $"{s.User.FirstName} {s.User.LastName}",
+            Email = s.User.Email,
+            PhotoUrl = s.User.PhotoUrl,
+            ActiveGroupsCount = s.GroupStudents.Count(gs => gs.IsActive)
+        }));
     }
 
-    #region Private Methods
-
-    private static string GetStudentCacheKey(int id) => $"student_{id}";
-
-    private async Task InvalidateStudentListCacheAsync()
+    private static StudentResponseDto MapToResponseDto(Student s, User u) => new()
     {
-        await _cacheService.RemoveAsync("all_students");
-        _logger.LogDebug("Student list cache invalidated");
-    }
-
-    private async Task InvalidateStudentGroupCacheAsync(int studentId)
-    {
-        var cacheKey = $"student_with_groups_{studentId}";
-        await _cacheService.RemoveAsync(cacheKey);
-        _logger.LogDebug("Student group cache invalidated for student ID: {StudentId}", studentId);
-    }
-
-    private static StudentResponseDto MapToResponseDto(Student student, User user) => new()
-    {
-        Id = student.Id,
-        UserId = user.Id,
-        FullName = $"{user.FirstName} {user.LastName}",
-        Email = user.Email,
-        Phone = student.Phone,
-        AvatarUrl = user.PhotoUrl,
-        TelegramUsername = student.TelegramUsername,
-        GithubUrl = student.GithubUrl,
-        AboutMe = student.AboutMe,
-        DateOfBirth = student.DateOfBirth,
-        EnrollDate = student.EnrollDate
+        Id = s.Id,
+        UserId = u.Id,
+        FullName = $"{u.FirstName} {u.LastName}",
+        Email = u.Email,
+        Phone = s.Phone,
+        PhotoUrl = u.PhotoUrl,
+        TelegramUsername = s.TelegramUsername,
+        GithubUrl = s.GithubUrl,
+        AboutMe = s.AboutMe,
+        DateOfBirth = s.DateOfBirth,
+        Balance = s.Balance,
+        IsActive = s.IsActive,
+        EnrollDate = s.EnrollDate,
+        ActiveGroupsCount = s.GroupStudents?.Count(gs => gs.IsActive) ?? 0
     };
-
-    private static StudentFullProfileDto MapToFullProfileDto(Student student, double averageScore, int totalAbsences) => new()
-    {
-        Id = student.Id,
-        UserId = student.UserId,
-        FullName = $"{student.User.FirstName} {student.User.LastName}",
-        Email = student.User.Email,
-        Phone = student.Phone,
-        PhotoUrl = student.User.PhotoUrl,
-        TelegramUsername = student.TelegramUsername,
-        GithubUrl = student.GithubUrl,
-        AboutMe = student.AboutMe,
-        DateOfBirth = student.DateOfBirth,
-        EnrollDate = student.EnrollDate,
-        Groups = student.GroupStudents
-            .Where(gs => gs.IsActive)
-            .Select(gs => new GroupShortDto
-            {
-                Id = gs.Group.Id,
-                Name = gs.Group.Name,
-                CourseName = gs.Group.Course.Name,
-                MentorName = $"{gs.Group.Mentor.User.FirstName} {gs.Group.Mentor.User.LastName}",
-                Status = gs.Group.Status
-            }),
-        WeekResults = student.WeekResults.Select(wr => new WeeklyResultResponseDto
-        {
-            Id = wr.Id,
-            StudentId = wr.StudentId,
-            StudentName = $"{student.User.FirstName} {student.User.LastName}",
-            GroupId = wr.GroupId,
-            GroupName = wr.Group.Name,
-            WeekNumber = wr.WeekNumber,
-            AttendanceScore = wr.AttendanceScore,
-            BonusScore = wr.BonusScore,
-            ExamScore = wr.ExamScore,
-            TotalScore = wr.TotalScore,
-            MentorComment = wr.MentorComment,
-            CreatedAt = wr.CreatedAt
-        }),
-        AverageScore = Math.Round(averageScore, 2),
-        TotalAbsences = totalAbsences
-    };
-   #endregion
 }

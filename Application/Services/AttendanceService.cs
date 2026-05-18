@@ -8,6 +8,8 @@ namespace Application.Services;
 
 public class AttendanceService(IUnitOfWork uow) : IAttendanceService
 {
+    // ───── Basic CRUD ─────
+
     public async Task<Result<AttendanceResponseDto>> CreateAsync(AttendanceCreateDto dto, CancellationToken ct = default)
     {
         var lesson = await uow.Lessons.GetByIdAsync(dto.LessonId, ct);
@@ -24,33 +26,22 @@ public class AttendanceService(IUnitOfWork uow) : IAttendanceService
 
         var alreadyExists = await uow.Attendances.AlreadyExistsAsync(dto.LessonId, dto.StudentId, ct);
         if (alreadyExists)
-            return Result<AttendanceResponseDto>.Fail("Attendance already exists for this student", ErrorType.Conflict);
-
-        if (!dto.IsPresent && dto.Score > 0)
-            return Result<AttendanceResponseDto>.Fail("Cannot give score to absent student", ErrorType.Validation);
-
-        if (!dto.HomeworkDone && dto.HomeworkScore > 0)
-            return Result<AttendanceResponseDto>.Fail("Cannot give homework score if homework is not done", ErrorType.Validation);
+            return Result<AttendanceResponseDto>.Fail("Attendance already exists", ErrorType.Conflict);
 
         var attendance = new Attendance
         {
             LessonId = dto.LessonId,
             StudentId = dto.StudentId,
             IsPresent = dto.IsPresent,
-            Score = dto.Score,
+            AbsenceReason = dto.AbsenceReason,
             MentorNote = dto.MentorNote,
-            HomeworkDone = dto.HomeworkDone,
-            HomeworkScore = dto.HomeworkScore,
             CreatedAt = DateTime.UtcNow
         };
 
         await uow.Attendances.AddAsync(attendance, ct);
         await uow.SaveChangesAsync(ct);
 
-        
-        var saved = await uow.Attendances.GetByLessonAndStudentAsync(dto.LessonId, dto.StudentId, ct);
-
-        return Result<AttendanceResponseDto>.Ok(MapToResponseDto(saved!));
+        return Result<AttendanceResponseDto>.Ok(MapToResponseDto(attendance));
     }
 
     public async Task<Result<AttendanceResponseDto>> UpdateAsync(int id, AttendanceUpdateDto dto, CancellationToken ct = default)
@@ -59,53 +50,15 @@ public class AttendanceService(IUnitOfWork uow) : IAttendanceService
         if (attendance is null)
             return Result<AttendanceResponseDto>.Fail("Attendance not found", ErrorType.NotFound);
 
-        if (dto.IsPresent.HasValue)
-        {
-            if (!dto.IsPresent.Value)
-            {
-                attendance.Score = 0;
-                attendance.IsPresent = false;
-            }
-            else
-            {
-                attendance.IsPresent = true;
-            }
-        }
-
-        if (dto.Score.HasValue)
-        {
-            if (!attendance.IsPresent && dto.Score.Value > 0)
-                return Result<AttendanceResponseDto>.Fail("Cannot give score to absent student", ErrorType.Validation);
-
-            attendance.Score = dto.Score.Value;
-        }
-
-        if (dto.HomeworkDone.HasValue)
-        {
-            if (!dto.HomeworkDone.Value)
-                attendance.HomeworkScore = 0;
-
-            attendance.HomeworkDone = dto.HomeworkDone.Value;
-        }
-
-        if (dto.HomeworkScore.HasValue)
-        {
-            if (!attendance.HomeworkDone && dto.HomeworkScore.Value > 0)
-                return Result<AttendanceResponseDto>.Fail("Cannot give homework score if homework is not done", ErrorType.Validation);
-
-            attendance.HomeworkScore = dto.HomeworkScore.Value;
-        }
-
+        attendance.IsPresent = dto.IsPresent;
+        attendance.AbsenceReason = dto.AbsenceReason;
         if (dto.MentorNote is not null) attendance.MentorNote = dto.MentorNote;
-
         attendance.UpdatedAt = DateTime.UtcNow;
 
         uow.Attendances.Update(attendance);
         await uow.SaveChangesAsync(ct);
 
-        var updated = await uow.Attendances.GetByLessonAndStudentAsync(attendance.LessonId, attendance.StudentId, ct);
-
-        return Result<AttendanceResponseDto>.Ok(MapToResponseDto(updated!));
+        return Result<AttendanceResponseDto>.Ok(MapToResponseDto(attendance));
     }
 
     public async Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default)
@@ -120,29 +73,128 @@ public class AttendanceService(IUnitOfWork uow) : IAttendanceService
         return Result<bool>.Ok(true);
     }
 
+    public async Task<Result<AttendanceResponseDto>> GetByIdAsync(int id, CancellationToken ct = default)
+    {
+        var attendance = await uow.Attendances.GetByIdAsync(id, ct);
+        if (attendance is null)
+            return Result<AttendanceResponseDto>.Fail("Attendance not found", ErrorType.NotFound);
+
+        return Result<AttendanceResponseDto>.Ok(MapToResponseDto(attendance));
+    }
+
+    // ───── Mentor: Lesson ─────
+
     public async Task<Result<IEnumerable<AttendanceResponseDto>>> GetByLessonIdAsync(int lessonId, CancellationToken ct = default)
     {
-        var lesson = await uow.Lessons.GetByIdAsync(lessonId, ct);
-        if (lesson is null)
-            return Result<IEnumerable<AttendanceResponseDto>>.Fail("Lesson not found", ErrorType.NotFound);
-
         var attendances = await uow.Attendances.GetByLessonIdAsync(lessonId, ct);
-        var result = attendances.Select(MapToResponseDto);
-
-        return Result<IEnumerable<AttendanceResponseDto>>.Ok(result);
+        return Result<IEnumerable<AttendanceResponseDto>>.Ok(attendances.Select(MapToResponseDto));
     }
+
+    public async Task<Result<bool>> MarkAllByLessonAsync(int lessonId, bool isPresent, CancellationToken ct = default)
+    {
+        var attendances = await uow.Attendances.GetByLessonIdAsync(lessonId, ct);
+        foreach (var a in attendances)
+        {
+            a.IsPresent = isPresent;
+            if (!isPresent) a.AbsenceReason = null;
+            a.UpdatedAt = DateTime.UtcNow;
+            uow.Attendances.Update(a);
+        }
+        await uow.SaveChangesAsync(ct);
+        return Result<bool>.Ok(true);
+    }
+
+    public async Task<Result<int>> GetPresentCountByLessonAsync(int lessonId, CancellationToken ct = default)
+    {
+        var attendances = await uow.Attendances.GetByLessonIdAsync(lessonId, ct);
+        return Result<int>.Ok(attendances.Count(a => a.IsPresent));
+    }
+
+    public async Task<Result<int>> GetAbsentCountByLessonAsync(int lessonId, CancellationToken ct = default)
+    {
+        var attendances = await uow.Attendances.GetByLessonIdAsync(lessonId, ct);
+        return Result<int>.Ok(attendances.Count(a => !a.IsPresent));
+    }
+
+    // ───── Mentor: Week ─────
 
     public async Task<Result<IEnumerable<AttendanceResponseDto>>> GetByWeekAsync(int groupId, int weekNumber, CancellationToken ct = default)
     {
-        var group = await uow.Groups.GetByIdAsync(groupId, ct);
-        if (group is null)
-            return Result<IEnumerable<AttendanceResponseDto>>.Fail("Group not found", ErrorType.NotFound);
-
         var attendances = await uow.Attendances.GetByWeekAsync(groupId, weekNumber, ct);
-        var result = attendances.Select(MapToResponseDto);
-
-        return Result<IEnumerable<AttendanceResponseDto>>.Ok(result);
+        return Result<IEnumerable<AttendanceResponseDto>>.Ok(attendances.Select(MapToResponseDto));
     }
+
+    public async Task<Result<int>> GetPresentCountByWeekAsync(int studentId, int groupId, int weekNumber, CancellationToken ct = default)
+    {
+        var count = await uow.Attendances.GetPresentCountByWeekAsync(studentId, groupId, weekNumber, ct);
+        return Result<int>.Ok(count);
+    }
+
+    // ───── Mentor: Group ─────
+
+    public async Task<Result<IEnumerable<AttendanceResponseDto>>> GetByGroupAsync(int groupId, CancellationToken ct = default)
+    {
+        var lessons = await uow.Lessons.GetByGroupIdAsync(groupId, ct);
+        var lessonIds = lessons.Select(l => l.Id);
+        var attendances = new List<Attendance>();
+        foreach (var id in lessonIds)
+        {
+            var list = await uow.Attendances.GetByLessonIdAsync(id, ct);
+            attendances.AddRange(list);
+        }
+        return Result<IEnumerable<AttendanceResponseDto>>.Ok(attendances.Select(MapToResponseDto));
+    }
+
+    public async Task<Result<int>> GetAbsenceCountByGroupAsync(int studentId, int groupId, CancellationToken ct = default)
+    {
+        var count = await uow.Attendances.GetAbsenceCountAsync(studentId, groupId, ct);
+        return Result<int>.Ok(count);
+    }
+
+    public async Task<Result<double>> GetAttendanceRateByGroupAsync(int studentId, int groupId, CancellationToken ct = default)
+    {
+        var rate = await uow.Attendances.GetAttendanceRateAsync(studentId, groupId, ct);
+        return Result<double>.Ok(rate);
+    }
+
+    // ───── Mentor: Bulk ─────
+
+    public async Task<Result<bool>> BulkCreateAsync(IEnumerable<AttendanceCreateDto> dtos, CancellationToken ct = default)
+    {
+        foreach (var dto in dtos)
+        {
+            var attendance = new Attendance
+            {
+                LessonId = dto.LessonId,
+                StudentId = dto.StudentId,
+                IsPresent = dto.IsPresent,
+                AbsenceReason = dto.AbsenceReason,
+                MentorNote = dto.MentorNote,
+                CreatedAt = DateTime.UtcNow
+            };
+            await uow.Attendances.AddAsync(attendance, ct);
+        }
+        await uow.SaveChangesAsync(ct);
+        return Result<bool>.Ok(true);
+    }
+
+    public async Task<Result<bool>> BulkUpdateAsync(IEnumerable<AttendanceUpdateBulkDto> dtos, CancellationToken ct = default)
+    {
+        foreach (var dto in dtos)
+        {
+            var attendance = await uow.Attendances.GetByIdAsync(dto.AttendanceId, ct);
+            if (attendance is null) continue;
+
+            attendance.IsPresent = dto.IsPresent;
+            if (dto.MentorNote is not null) attendance.MentorNote = dto.MentorNote;
+            attendance.UpdatedAt = DateTime.UtcNow;
+            uow.Attendances.Update(attendance);
+        }
+        await uow.SaveChangesAsync(ct);
+        return Result<bool>.Ok(true);
+    }
+
+    // ───── Student ─────
 
     public async Task<Result<bool>> AddAbsenceReasonAsync(int attendanceId, int userId, AddAbsenceReasonDto dto, CancellationToken ct = default)
     {
@@ -158,14 +210,10 @@ public class AttendanceService(IUnitOfWork uow) : IAttendanceService
             return Result<bool>.Fail("Forbidden", ErrorType.Forbidden);
 
         if (attendance.IsPresent)
-            return Result<bool>.Fail("Student was present, no need for absence reason", ErrorType.Validation);
-
-        if (attendance.AbsenceReason is not null)
-            return Result<bool>.Fail("Absence reason already added", ErrorType.Conflict);
+            return Result<bool>.Fail("Student was present", ErrorType.Validation);
 
         attendance.AbsenceReason = dto.AbsenceReason;
         attendance.UpdatedAt = DateTime.UtcNow;
-
         uow.Attendances.Update(attendance);
         await uow.SaveChangesAsync(ct);
 
@@ -178,25 +226,18 @@ public class AttendanceService(IUnitOfWork uow) : IAttendanceService
         if (student is null)
             return Result<IEnumerable<AttendanceResponseDto>>.Fail("Student not found", ErrorType.NotFound);
 
-        var isInGroup = await uow.GroupStudents.IsStudentInGroupAsync(groupId, student.Id, ct);
-        if (!isInGroup)
-            return Result<IEnumerable<AttendanceResponseDto>>.Fail("Student is not in this group", ErrorType.Validation);
-
         var attendances = await uow.Attendances.GetByStudentAndGroupAsync(student.Id, groupId, ct);
-        var result = attendances.Select(MapToResponseDto);
-
-        return Result<IEnumerable<AttendanceResponseDto>>.Ok(result);
+        return Result<IEnumerable<AttendanceResponseDto>>.Ok(attendances.Select(MapToResponseDto));
     }
 
-    public async Task<Result<double>> GetMyAverageScoreAsync(int userId, int groupId, CancellationToken ct = default)
+    public async Task<Result<double>> GetMyAttendanceRateAsync(int userId, int groupId, CancellationToken ct = default)
     {
         var student = await uow.Students.GetByUserIdAsync(userId, ct);
         if (student is null)
             return Result<double>.Fail("Student not found", ErrorType.NotFound);
 
-        var average = await uow.Attendances.GetAverageScoreAsync(student.Id, groupId, ct);
-
-        return Result<double>.Ok(Math.Round(average, 2));
+        var rate = await uow.Attendances.GetAttendanceRateAsync(student.Id, groupId, ct);
+        return Result<double>.Ok(Math.Round(rate, 2));
     }
 
     public async Task<Result<int>> GetMyAbsenceCountAsync(int userId, int groupId, CancellationToken ct = default)
@@ -206,24 +247,35 @@ public class AttendanceService(IUnitOfWork uow) : IAttendanceService
             return Result<int>.Fail("Student not found", ErrorType.NotFound);
 
         var count = await uow.Attendances.GetAbsenceCountAsync(student.Id, groupId, ct);
-
         return Result<int>.Ok(count);
     }
+
+    public async Task<Result<double>> GetMyAverageScoreAsync(int userId, int groupId, CancellationToken ct = default)
+    {
+        var student = await uow.Students.GetByUserIdAsync(userId, ct);
+        if (student is null)
+            return Result<double>.Fail("Student not found", ErrorType.NotFound);
+
+        var rate = await uow.Attendances.GetAttendanceRateAsync(student.Id, groupId, ct);
+        return Result<double>.Ok(Math.Round(rate, 2));
+    }
+
+    // ───── Mapper ─────
 
     private static AttendanceResponseDto MapToResponseDto(Attendance a) => new()
     {
         Id = a.Id,
         LessonId = a.LessonId,
-        LessonDate = a.Lesson.LessonDate,
-        WeekNumber = a.Lesson.WeekNumber,
+        LessonDate = a.Lesson?.LessonDate ?? DateTime.MinValue,
+        WeekNumber = a.Lesson?.WeekNumber ?? 0,
         StudentId = a.StudentId,
-        StudentName = $"{a.Student.User.FirstName} {a.Student.User.LastName}",
+        StudentName = a.Student?.User != null
+            ? $"{a.Student.User.FirstName} {a.Student.User.LastName}"
+            : $"Student {a.StudentId}",
         IsPresent = a.IsPresent,
-        Score = a.Score,
         AbsenceReason = a.AbsenceReason,
         MentorNote = a.MentorNote,
-        HomeworkDone = a.HomeworkDone,
-        HomeworkScore = a.HomeworkScore,
-        CreatedAt = a.CreatedAt
+        CreatedAt = a.CreatedAt,
+        UpdatedAt = a.UpdatedAt
     };
 }

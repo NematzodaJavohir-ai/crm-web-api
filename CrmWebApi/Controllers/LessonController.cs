@@ -10,8 +10,16 @@ namespace WebApi.Controllers;
 [Route("api/lessons")]
 public class LessonController(ILessonService lessonService) : BaseController
 {
+    [HttpGet]
+    //[Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
+    public async Task<IActionResult> GetAll(CancellationToken ct)
+    {
+        var result = await lessonService.GetAllAsync(ct);
+        return HandleResult(result);
+    }
+
     [HttpPost]
-    [Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
+    //[Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
     public async Task<IActionResult> Create([FromBody] LessonCreateDto dto, CancellationToken ct)
     {
         var result = await lessonService.CreateAsync(dto, ct);
@@ -19,7 +27,7 @@ public class LessonController(ILessonService lessonService) : BaseController
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
+    //[Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
     public async Task<IActionResult> Update(int id, [FromBody] LessonUpdateDto dto, CancellationToken ct)
     {
         var result = await lessonService.UpdateAsync(id, dto, ct);
@@ -27,7 +35,7 @@ public class LessonController(ILessonService lessonService) : BaseController
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
+    //[Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         var result = await lessonService.DeleteAsync(id, ct);
@@ -35,7 +43,7 @@ public class LessonController(ILessonService lessonService) : BaseController
     }
 
     [HttpPatch("{id:int}/complete")]
-    [Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
+    //[Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
     public async Task<IActionResult> MarkAsCompleted(int id, CancellationToken ct)
     {
         var result = await lessonService.MarkAsCompletedAsync(id, ct);
@@ -43,7 +51,7 @@ public class LessonController(ILessonService lessonService) : BaseController
     }
 
     [HttpGet("group/{groupId:int}")]
-    [Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
+    //[Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
     public async Task<IActionResult> GetByGroupId(int groupId, CancellationToken ct)
     {
         var result = await lessonService.GetByGroupIdAsync(groupId, ct);
@@ -51,7 +59,7 @@ public class LessonController(ILessonService lessonService) : BaseController
     }
 
     [HttpGet("group/{groupId:int}/week/{weekNumber:int}")]
-    [Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
+    //[Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
     public async Task<IActionResult> GetByWeekNumber(int groupId, int weekNumber, CancellationToken ct)
     {
         var result = await lessonService.GetByWeekNumberAsync(groupId, weekNumber, ct);
@@ -59,7 +67,7 @@ public class LessonController(ILessonService lessonService) : BaseController
     }
 
     [HttpGet("{id:int}/with-attendances")]
-    [Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
+    //[Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Mentor))]
     public async Task<IActionResult> GetWithAttendances(int id, CancellationToken ct)
     {
         var result = await lessonService.GetWithAttendancesAsync(id, ct);
@@ -67,7 +75,7 @@ public class LessonController(ILessonService lessonService) : BaseController
     }
 
     [HttpGet("me/group/{groupId:int}")]
-    [Authorize(Roles = nameof(UserRole.Student))]
+    //[Authorize(Roles = nameof(UserRole.Student))]
     public async Task<IActionResult> GetMyLessons(int groupId, CancellationToken ct)
     {
         var result = await lessonService.GetMyLessonsAsync(GetUserId(), groupId, ct);

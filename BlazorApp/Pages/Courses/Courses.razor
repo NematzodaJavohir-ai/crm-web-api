@@ -1,0 +1,634 @@
+﻿@page "/courses"
+@using BlazorApp.ApiServices.Interfaces
+@using BlazorApp.DTOs.CourseDto
+@inject ICourseApiService CourseService
+@inject NavigationManager Navigation
+
+<div class="students-page">
+
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1 class="page-title">Courses</h1>
+            <span class="page-subtitle">Manage all courses in your platform</span>
+        </div>
+        <button class="btn-create" @onclick="OpenCreateModal">
+            <i class="bi bi-plus-lg"></i>
+            Add Course
+        </button>
+    </div>
+
+    <div class="toolbar">
+        <div class="search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" placeholder="Search courses..."
+                   @bind="searchQuery" @bind:event="oninput" />
+        </div>
+        <div class="filter-wrap">
+            <select @bind="filterActive">
+                <option value="">All Status</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+        </div>
+        <span class="total-count">@FilteredCourses.Count() courses</span>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-wrap">
+            <div class="spinner"></div>
+            <span>Loading courses...</span>
+        </div>
+    }
+    else if (!FilteredCourses.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-book-half"></i>
+            <h3>No courses found</h3>
+            <p>Try adjusting your search or add a new course</p>
+            <button class="btn-create" @onclick="OpenCreateModal">
+                <i class="bi bi-plus-lg"></i> Add First Course
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Course</th>
+                        <th>Description</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var course in FilteredCourses)
+                    {
+                        var index = FilteredCourses.ToList().IndexOf(course) + 1;
+                        <tr>
+                            <td class="td-num">@index</td>
+                            <td>
+                                <div class="student-cell">
+                                    <div class="course-avatar">
+                                        <i class="bi bi-book-half"></i>
+                                    </div>
+                                    <div class="student-info">
+                                        <span class="student-name">@course.Name</span>
+                                        @if (!string.IsNullOrEmpty(course.IconUrl))
+                                        {
+                                            <span class="student-bio">@course.IconUrl</span>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="td-desc">@(course.Description?.Length > 50 ? course.Description.Substring(0, 50) + "..." : course.Description ?? "—")</td>
+                            <td class="td-duration">@course.DurationWeeks weeks</td>
+                            <td>
+                                @if (course.IsActive)
+                                {
+                                    <span class="status-badge active">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="status-badge inactive">Inactive</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="action-btns">
+                                    <button class="btn-icon btn-view" title="View" @onclick="() => OpenViewModal(course)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn-icon btn-edit" title="Edit" @onclick="() => OpenEditModal(course)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn-icon btn-delete" title="Delete" @onclick="() => OpenDeleteConfirm(course)">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@* CREATE MODAL *@
+@if (showCreateModal)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon create-icon">
+                    <i class="bi bi-book-half"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Create New Course</h2>
+                    <p class="premium-modal-subtitle">Fill in the information below</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="premium-form-grid">
+                    <div class="premium-form-group full-width">
+                        <label>Course Name <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-tag"></i>
+                            <input type="text" @bind="createDto.Name" placeholder="e.g., Full Stack Development" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Description</label>
+                        <div class="premium-input-wrapper textarea">
+                            <i class="bi bi-chat"></i>
+                            <textarea @bind="createDto.Description" placeholder="Course description..." rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Icon URL</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-image"></i>
+                            <input type="url" @bind="createDto.IconUrl" placeholder="https://..." />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Duration (weeks) <span class="required">*</span></label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-calendar-week"></i>
+                            <input type="number" @bind="createDto.DurationWeeks" placeholder="12" />
+                        </div>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="premium-alert error">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        @errorMessage
+                    </div>
+                }
+
+                <div class="premium-modal-footer">
+                    <button type="button" class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="premium-btn-primary" @onclick="CreateCourse" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="premium-spinner"></span>
+                            <span>Creating...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check-lg"></i>
+                            <span>Create Course</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* VIEW MODAL *@
+@if (showViewModal && selectedCourse != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal premium-modal-view" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon view-icon">
+                    <i class="bi bi-book-half"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Course Details</h2>
+                    <p class="premium-modal-subtitle">View course information</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="profile-header">
+                    <div class="profile-avatar-large course-color">
+                        <i class="bi bi-book-half" style="font-size: 40px;"></i>
+                    </div>
+                    <div class="profile-info-large">
+                        <h3 class="profile-name">@selectedCourse.Name</h3>
+                        <span class="profile-email">@(selectedCourse.IconUrl ?? "No icon")</span>
+                        <div class="profile-status-toggle">
+                            <span class="status-label">Status:</span>
+                            <div class="toggle-switch" @onclick="ToggleStatus">
+                                <input type="checkbox" id="statusToggle" checked="@selectedCourse.IsActive" disabled="@isSaving" />
+                                <label for="statusToggle" class="toggle-label">
+                                    <span class="toggle-button"></span>
+                                </label>
+                                <span class="status-text @(selectedCourse.IsActive ? "active-text" : "inactive-text")">
+                                    @(selectedCourse.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="details-grid">
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="bi bi-chat-quote"></i>
+                        </div>
+                        <div class="detail-content">
+                            <label>Description</label>
+                            <p class="bio-text">@(selectedCourse.Description ?? "No description provided")</p>
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="bi bi-calendar-week"></i>
+                        </div>
+                        <div class="detail-content">
+                            <label>Duration</label>
+                            <p>@selectedCourse.DurationWeeks weeks</p>
+                        </div>
+                    </div>
+
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="bi bi-calendar3"></i>
+                        </div>
+                        <div class="detail-content">
+                            <label>Created At</label>
+                            <p>@selectedCourse.CreatedAt.ToString("dd MMM yyyy")</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="premium-modal-footer">
+                <button class="premium-btn-secondary" @onclick="CloseModals">Close</button>
+                <button class="premium-btn-edit" @onclick="(() => { CloseModals(); OpenEditModal(selectedCourse); })">
+                    <i class="bi bi-pencil"></i> Edit Course
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* DELETE MODAL *@
+@if (showDeleteConfirm && selectedCourse != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal premium-modal-sm" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon delete-icon">
+                    <i class="bi bi-trash3-fill"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Delete Course</h2>
+                    <p class="premium-modal-subtitle">This action cannot be undone</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body text-center">
+                <div class="delete-warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <p>Are you sure you want to delete <strong>@selectedCourse.Name</strong>?</p>
+                    <small>All related data will be permanently removed.</small>
+                </div>
+            </div>
+            <div class="premium-modal-footer">
+                <button class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                <button class="premium-btn-danger" @onclick="DeleteCourse" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="premium-spinner"></span>
+                        <span>Deleting...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-trash3"></i>
+                        <span>Delete Permanently</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* EDIT MODAL *@
+@if (showEditModal && selectedCourse != null)
+{
+    <div class="modal-overlay" @onclick="CloseModals">
+        <div class="premium-modal" @onclick:stopPropagation="true">
+            <div class="premium-modal-header">
+                <div class="premium-modal-icon edit-icon">
+                    <i class="bi bi-pencil-square"></i>
+                </div>
+                <div class="premium-modal-title-section">
+                    <h2 class="premium-modal-title">Edit Course</h2>
+                    <p class="premium-modal-subtitle">Update course information</p>
+                </div>
+                <button class="premium-modal-close" @onclick="CloseModals">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="premium-modal-body">
+                <div class="premium-form-grid">
+                    <div class="premium-form-group full-width">
+                        <label>Course Name</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-tag"></i>
+                            <input type="text" @bind="selectedCourse.Name" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group full-width">
+                        <label>Description</label>
+                        <div class="premium-input-wrapper textarea">
+                            <i class="bi bi-chat"></i>
+                            <textarea @bind="selectedCourse.Description" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Icon URL</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-image"></i>
+                            <input type="url" @bind="selectedCourse.IconUrl" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Duration (weeks)</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-calendar-week"></i>
+                            <input type="number" @bind="selectedCourse.DurationWeeks" />
+                        </div>
+                    </div>
+                    <div class="premium-form-group">
+                        <label>Status</label>
+                        <div class="premium-input-wrapper">
+                            <i class="bi bi-toggle-on"></i>
+                            <select @bind="selectedCourse.IsActive">
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="premium-modal-footer">
+                    <button type="button" class="premium-btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="premium-btn-primary" @onclick="UpdateCourse" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="premium-spinner"></span>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-save"></i>
+                            <span>Save Changes</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<CourseResponseDto> courses = new();
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string searchQuery = "";
+    private string filterActive = "";
+    private string errorMessage = "";
+
+    private bool showCreateModal = false;
+    private bool showViewModal = false;
+    private bool showEditModal = false;
+    private bool showDeleteConfirm = false;
+
+    private CourseCreateDto createDto = new();
+    private CourseResponseDto? selectedCourse;
+
+    private IEnumerable<CourseResponseDto> FilteredCourses =>
+        courses.Where(c =>
+            (string.IsNullOrEmpty(searchQuery) ||
+             c.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+             (c.Description?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+            (string.IsNullOrEmpty(filterActive) || c.IsActive.ToString() == filterActive));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCourses();
+    }
+
+    private async Task LoadCourses()
+    {
+        isLoading = true;
+        try
+        {
+            courses = await CourseService.GetAllAsync() ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading courses: {ex.Message}");
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OpenCreateModal()
+    {
+        createDto = new();
+        errorMessage = "";
+        showCreateModal = true;
+    }
+
+    private void OpenViewModal(CourseResponseDto course)
+    {
+        selectedCourse = course;
+        showViewModal = true;
+    }
+
+    private void OpenEditModal(CourseResponseDto course)
+    {
+        selectedCourse = course;
+        showEditModal = true;
+    }
+
+    private void OpenDeleteConfirm(CourseResponseDto course)
+    {
+        selectedCourse = course;
+        showDeleteConfirm = true;
+    }
+
+    private void CloseModals()
+    {
+        showCreateModal = false;
+        showViewModal = false;
+        showEditModal = false;
+        showDeleteConfirm = false;
+        selectedCourse = null;
+        errorMessage = "";
+        StateHasChanged();
+    }
+
+    private async Task CreateCourse()
+    {
+        if (string.IsNullOrWhiteSpace(createDto.Name))
+        {
+            errorMessage = "Course name is required";
+            return;
+        }
+        if (createDto.DurationWeeks <= 0)
+        {
+            errorMessage = "Duration must be greater than 0";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var result = await CourseService.CreateAsync(createDto);
+            if (result != null)
+            {
+                await LoadCourses();
+                CloseModals();
+            }
+            else
+            {
+                errorMessage = "Failed to create course. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            StateHasChanged();
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateCourse()
+    {
+        if (selectedCourse == null) return;
+
+        isSaving = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var updateDto = new CourseUpdateDto
+            {
+                Name = selectedCourse.Name,
+                Description = selectedCourse.Description,
+                IconUrl = selectedCourse.IconUrl,
+                DurationWeeks = selectedCourse.DurationWeeks,
+                IsActive = selectedCourse.IsActive
+            };
+
+            var result = await CourseService.UpdateAsync(selectedCourse.Id, updateDto);
+            if (result != null)
+            {
+                await LoadCourses();
+                CloseModals();
+            }
+            else
+            {
+                errorMessage = "Failed to update course. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            StateHasChanged();
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteCourse()
+    {
+        if (selectedCourse == null) return;
+
+        isSaving = true;
+        errorMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var success = await CourseService.DeleteAsync(selectedCourse.Id);
+            if (success)
+            {
+                await LoadCourses();
+                CloseModals();
+            }
+            else
+            {
+                errorMessage = "Failed to delete course. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleStatus()
+    {
+        if (selectedCourse == null) return;
+
+        isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            var newStatus = !selectedCourse.IsActive;
+            var success = await CourseService.SetActiveAsync(selectedCourse.Id, newStatus);
+            
+            if (success)
+            {
+                selectedCourse.IsActive = newStatus;
+                await LoadCourses();
+                errorMessage = "";
+            }
+            else
+            {
+                errorMessage = "Failed to update status. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+}
