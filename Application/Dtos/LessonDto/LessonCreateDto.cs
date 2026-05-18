@@ -5,27 +5,25 @@ namespace Application.Dtos.LessonDto;
 public class LessonCreateDto
 {
     [Required(ErrorMessage = "GroupId is required")]
-    [Range(1, int.MaxValue, ErrorMessage = "Invalid Group ID")]
     public int GroupId { get; set; }
 
-    [Required(ErrorMessage = "Week number is required")]
-    [Range(1, 52, ErrorMessage = "Week number must be between 1 and 52")]
+    [Required(ErrorMessage = "WeekNumber is required")]
+    [Range(1, 52, ErrorMessage = "WeekNumber must be between 1 and 52")]
     public int WeekNumber { get; set; }
 
-    [Required(ErrorMessage = "Lesson date is required")]
-    [DataType(DataType.DateTime)]
+    [Required(ErrorMessage = "LessonDate is required")]
     public DateTime LessonDate { get; set; }
 
-    [Required(ErrorMessage = "Lesson title is required")]
-    [StringLength(200, MinimumLength = 3, ErrorMessage = "Title must be between 3 and 200 characters")]
-    public string Title { get; set; } = null!;
+    [MaxLength(200, ErrorMessage = "Title cannot exceed 200 characters")]
+    public string? Title { get; set; }
 
-    [MaxLength(1000, ErrorMessage = "Description cannot exceed 1000 characters")]
+    [MaxLength(2000, ErrorMessage = "Description cannot exceed 2000 characters")]
     public string? Description { get; set; }
 
-    [MaxLength(1000, ErrorMessage = "Homework description cannot exceed 1000 characters")]
+    [MaxLength(2000, ErrorMessage = "HomeworkDescription cannot exceed 2000 characters")]
     public string? HomeworkDescription { get; set; }
 
-    [Url(ErrorMessage = "Material URL must be a valid URL")]
+    [Url(ErrorMessage = "MaterialUrl must be a valid URL")]
+    [MaxLength(500, ErrorMessage = "MaterialUrl cannot exceed 500 characters")]
     public string? MaterialUrl { get; set; }
 }

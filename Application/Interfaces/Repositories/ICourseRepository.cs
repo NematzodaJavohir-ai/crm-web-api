@@ -8,10 +8,14 @@ public interface ICourseRepository
     void Update(Course course);
     void Delete(Course course);
     Task<bool> ExistsAsync(int id, CancellationToken ct = default);
+   
 
     Task<Course?> GetByIdAsync(int id, CancellationToken ct = default);
-    Task<Course?> GetWithGroupsAsync(int id, CancellationToken ct = default);          
+    Task<Course?> GetWithGroupsAsync(int id, CancellationToken ct = default);
     Task<IEnumerable<Course>> GetAllAsync(CancellationToken ct = default);
     Task<IEnumerable<Course>> GetAllActiveAsync(CancellationToken ct = default);
-    Task<bool> NameExistsAsync(string name, CancellationToken ct = default);  
+    Task<IEnumerable<Course>> GetByPriceRangeAsync(decimal min, decimal max, CancellationToken ct = default);
+    Task<bool> NameExistsAsync(string name, CancellationToken ct = default);
+    Task<bool> HasActiveGroupsAsync(int id, CancellationToken ct = default);
+    Task<int> GetGroupCountAsync(int id, CancellationToken ct = default);
 }

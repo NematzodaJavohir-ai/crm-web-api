@@ -12,10 +12,8 @@ public class Group
     public DateTime? EndDate { get; set; }
     public int MaxStudents { get; set; } = 15;
     public GroupStatus Status { get; set; } = GroupStatus.Active;
-    public string? Description { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation
     public Course Course { get; set; } = null!;
     public Mentor Mentor { get; set; } = null!;
     public ICollection<GroupStudent> GroupStudents { get; set; } = new List<GroupStudent>();

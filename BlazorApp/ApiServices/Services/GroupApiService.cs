@@ -5,14 +5,18 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using BlazorApp.ApiServices.Interfaces;
 using BlazorApp.DTOs.GroupDto;
-using BlazorApp.DTOs.StudentDto;
 using BlazorApp.ApiServices.Enums;
 
 namespace BlazorApp.ApiServices;
 
-public class GroupApiService( HttpClient _http) : IGroupApiService
+public class GroupApiService : IGroupApiService
 {
-    
+    private readonly HttpClient _http;
+
+    public GroupApiService(HttpClient http)
+    {
+        _http = http;
+    }
 
     public async Task<List<GroupResponseDto>?> GetAllAsync()
     {
@@ -75,15 +79,19 @@ public class GroupApiService( HttpClient _http) : IGroupApiService
             
             if (response.IsSuccessStatusCode)
             {
-                return JsonSerializer.Deserialize<GroupResponseDto>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return JsonSerializer.Deserialize<GroupResponseDto>(content, new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true 
+                });
             }
             
-            throw new Exception($"Failed to create group: {response.StatusCode}");
+            Console.WriteLine($"CreateAsync failed: {response.StatusCode}");
+            return null;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"CreateAsync error: {ex.Message}");
-            throw;
+            return null;
         }
     }
 
@@ -96,15 +104,19 @@ public class GroupApiService( HttpClient _http) : IGroupApiService
             
             if (response.IsSuccessStatusCode)
             {
-                return JsonSerializer.Deserialize<GroupResponseDto>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return JsonSerializer.Deserialize<GroupResponseDto>(content, new JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true 
+                });
             }
             
-            throw new Exception($"Failed to update group: {response.StatusCode}");
+            Console.WriteLine($"UpdateAsync failed: {response.StatusCode}");
+            return null;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"UpdateAsync error: {ex.Message}");
-            throw;
+            return null;
         }
     }
 

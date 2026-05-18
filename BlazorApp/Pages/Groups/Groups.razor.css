@@ -865,3 +865,347 @@
         width: 100%;
     }
 }
+/* Groups Grid Cards */
+.groups-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 24px;
+}
+
+.group-card {
+    background: white;
+    border-radius: 24px;
+    border: 1px solid #E4E5F0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.group-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 30px -12px rgba(0, 0, 0, 0.15);
+    border-color: #E0E0FF;
+}
+
+.group-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #F8F9FC, #FFFFFF);
+    border-bottom: 1px solid #F0F1F8;
+}
+
+.group-card-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #6C63FF, #4B44CC);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+}
+
+.group-card-status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.group-card-status.active {
+    background: #DCFCE7;
+    color: #16A34A;
+}
+
+.group-card-status.completed {
+    background: #DBEAFE;
+    color: #2563EB;
+}
+
+.group-card-status.cancelled {
+    background: #FEE2E2;
+    color: #EF4444;
+}
+
+.group-card-body {
+    padding: 20px;
+}
+
+.group-card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1A1B2E;
+    margin: 0 0 8px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.group-card-description {
+    font-size: 13px;
+    color: #667085;
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
+.group-card-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #5A5B6E;
+}
+
+.stat-item i {
+    width: 20px;
+    color: #6C63FF;
+    font-size: 14px;
+}
+
+.group-card-footer {
+    display: flex;
+    gap: 8px;
+    padding: 16px 20px;
+    border-top: 1px solid #F0F1F8;
+    background: #F8F9FC;
+}
+
+.card-btn {
+    flex: 1;
+    padding: 8px 8px;
+    border: none;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.card-btn.view {
+    background: #EEF0FF;
+    color: #6C63FF;
+}
+
+.card-btn.view:hover {
+    background: #6C63FF;
+    color: white;
+}
+
+.card-btn.edit {
+    background: #FEF3C7;
+    color: #D97706;
+}
+
+.card-btn.edit:hover {
+    background: #F59E0B;
+    color: white;
+}
+
+.card-btn.students {
+    background: #DCFCE7;
+    color: #16A34A;
+}
+
+.card-btn.students:hover {
+    background: #16A34A;
+    color: white;
+}
+
+.card-btn.delete {
+    background: #FEE2E2;
+    color: #EF4444;
+    flex: 0 0 40px;
+}
+
+.card-btn.delete:hover {
+    background: #EF4444;
+    color: white;
+}
+
+/* Detail Card Clickable */
+.detail-card.clickable {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.detail-card.clickable:hover {
+    background: #F0F1F8;
+    transform: translateY(-2px);
+}
+
+.detail-hint {
+    font-size: 10px;
+    color: #9A9BB0;
+    margin-top: 4px;
+    display: block;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .groups-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .group-card-footer {
+        flex-wrap: wrap;
+    }
+    
+    .card-btn {
+        flex: 1 1 auto;
+    }
+}
+/* Students Section in Modal */
+.students-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #F0F1F8;
+}
+
+.students-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.students-section-header h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1A1B2E;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.students-count {
+    font-size: 13px;
+    color: #9A9BB0;
+    background: #F5F6FA;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.students-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.student-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px;
+    background: #F8F9FC;
+    border-radius: 14px;
+    transition: all 0.2s;
+}
+
+.student-item:hover {
+    background: #EEF0FF;
+}
+
+.student-avatar-small {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6C63FF, #4B44CC);
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.student-info {
+    flex: 1;
+}
+
+.student-info .student-name {
+    font-weight: 600;
+    color: #1A1B2E;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.student-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 11px;
+    color: #667085;
+}
+
+.student-details i {
+    font-size: 11px;
+    margin-right: 3px;
+    color: #6C63FF;
+}
+
+.empty-students {
+    text-align: center;
+    padding: 30px;
+    background: #F8F9FC;
+    border-radius: 16px;
+}
+
+.empty-students i {
+    font-size: 36px;
+    color: #C4C5D4;
+}
+
+.empty-students p {
+    color: #9A9BB0;
+    margin: 8px 0;
+}
+
+.loading-small {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 30px;
+    color: #9A9BB0;
+}
+
+.spinner-small {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #E4E5F0;
+    border-top-color: #6C63FF;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.btn-small {
+    background: #6C63FF;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.btn-small:hover {
+    background: #4B44CC;
+}

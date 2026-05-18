@@ -46,9 +46,25 @@ build_metadata.AdditionalFiles.CssScope = b-kc989pta5g
 build_metadata.AdditionalFiles.TargetPath = TGF5b3V0XE5hdk1lbnUucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-iqpjrornlq
 
+[C:/Users/j7/OneDrive/Desktop/SoftClub/C\#/.Net-WebApi/CrmWebApi/BlazorApp/Pages/Attendances/Attendances.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXR0ZW5kYW5jZXNcQXR0ZW5kYW5jZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-tvo7s5da3q
+
+[C:/Users/j7/OneDrive/Desktop/SoftClub/C\#/.Net-WebApi/CrmWebApi/BlazorApp/Pages/Courses/Courses.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ291cnNlc1xDb3Vyc2VzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-5fr549x2zp
+
+[C:/Users/j7/OneDrive/Desktop/SoftClub/C\#/.Net-WebApi/CrmWebApi/BlazorApp/Pages/GroupStudents/GroupStudents.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcR3JvdXBTdHVkZW50c1xHcm91cFN0dWRlbnRzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-fnr5ko3i42
+
 [C:/Users/j7/OneDrive/Desktop/SoftClub/C\#/.Net-WebApi/CrmWebApi/BlazorApp/Pages/Groups/Groups.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcR3JvdXBzXEdyb3Vwcy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-lnvqg0e3ks
+
+[C:/Users/j7/OneDrive/Desktop/SoftClub/C\#/.Net-WebApi/CrmWebApi/BlazorApp/Pages/Lessons/Lessons.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTGVzc29uc1xMZXNzb25zLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-rdqd2mtmd2
 
 [C:/Users/j7/OneDrive/Desktop/SoftClub/C\#/.Net-WebApi/CrmWebApi/BlazorApp/Pages/Mentors/Mentors.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTWVudG9yc1xNZW50b3JzLnJhem9y

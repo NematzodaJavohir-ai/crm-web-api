@@ -2,8 +2,7 @@ using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Application.Configurations;
-
+namespace Infrastructure.Configurations;
 
 public class WeekResultConfiguration : IEntityTypeConfiguration<WeekResult>
 {
@@ -11,20 +10,18 @@ public class WeekResultConfiguration : IEntityTypeConfiguration<WeekResult>
     {
         builder.HasKey(wr => wr.Id);
 
-        
-        builder.HasIndex(wr => new { wr.StudentId, wr.GroupId, wr.WeekNumber })
-            .IsUnique();
+        builder.Property(wr => wr.MentorComment).HasMaxLength(1000);
 
-        builder.Property(wr => wr.MentorComment)
-            .HasMaxLength(1000);
+        builder.HasOne(wr => wr.Student)
+            .WithMany(s => s.WeekResults)
+            .HasForeignKey(wr => wr.StudentId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Property(wr => wr.BonusScore)
-            .HasDefaultValue(0);
+        builder.HasOne(wr => wr.Group)
+            .WithMany(g => g.WeekResults)
+            .HasForeignKey(wr => wr.GroupId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-        builder.Property(wr => wr.ExamScore)
-            .HasDefaultValue(0);
-
-        builder.Property(wr => wr.TotalScore)
-            .HasDefaultValue(0);
+        builder.HasIndex(wr => new { wr.StudentId, wr.GroupId, wr.WeekNumber }).IsUnique();
     }
 }

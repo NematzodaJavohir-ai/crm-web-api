@@ -1,14 +1,17 @@
 using System;
 
-namespace BlazorApp.DTOs.GroupStudentDto;
+namespace Application.Dtos.GroupStudentDto;
+
+
 
 public class GroupStudentResponseDto
 {
-   public int Id { get; set; }
+    public int Id { get; set; }
     public int GroupId { get; set; }
     public string GroupName { get; set; } = null!;
+    public string CourseName { get; set; } = null!;
     public int StudentId { get; set; }
-    public string StudentName { get; set; } = null!;
+    public string StudentFullName { get; set; } = null!;
     public string StudentEmail { get; set; } = null!;
     public DateTime JoinedAt { get; set; }
     public DateTime? LeftAt { get; set; }

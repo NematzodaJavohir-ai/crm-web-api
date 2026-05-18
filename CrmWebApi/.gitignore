@@ -1,1 +1,24 @@
+<<<<<<< HEAD
 
+=======
+# Build results
+**/bin/
+**/obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# Secrets
+appsettings*.json
+>>>>>>> origin/feature/BlazorApp-Building

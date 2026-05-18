@@ -3,7 +3,11 @@
 @using BlazorApp.DTOs.GroupDto
 @using BlazorApp.DTOs.CourseDto
 @using BlazorApp.DTOs.MentorDto
+@using BlazorApp.DTOs.StudentDto
 @inject IGroupApiService GroupService
+@inject ICourseApiService CourseService
+@inject IMentorApiService MentorService
+@inject NavigationManager Navigation
 
 <div class="students-page">
 
@@ -55,75 +59,56 @@
     }
     else
     {
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Group</th>
-                        <th>Course</th>
-                        <th>Mentor</th>
-                        <th>Students</th>
-                        <th>Period</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var group in FilteredGroups)
-                    {
-                        var index = FilteredGroups.ToList().IndexOf(group) + 1;
-                        <tr>
-                            <td class="td-num">@index</td>
-                            <td>
-                                <div class="student-cell">
-                                    <div class="group-avatar">
-                                        <i class="bi bi-collection-play-fill"></i>
-                                    </div>
-                                    <div class="student-info">
-                                        <span class="student-name">@group.Name</span>
-                                        @if (!string.IsNullOrEmpty(group.Description))
-                                        {
-                                            <span class="student-bio">@(group.Description.Length > 30 ? group.Description.Substring(0, 30) + "..." : group.Description)</span>
-                                        }
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="td-course">@group.Course.Name</td>
-                            <td class="td-mentor">@group.Mentor.FullName</td>
-                            <td class="td-students">@group.CurrentStudentCount / @group.MaxStudents</td>
-                            <td class="td-period">@group.StartDate.ToString("dd MMM") - @(group.EndDate?.ToString("dd MMM yyyy") ?? "Ongoing")</td>
-                            <td>
-                                @if (group.Status.ToString() == "Active")
-                                {
-                                    <span class="status-badge active">Active</span>
-                                }
-                                else if (group.Status.ToString() == "Completed")
-                                {
-                                    <span class="status-badge completed">Completed</span>
-                                }
-                                else
-                                {
-                                    <span class="status-badge cancelled">Cancelled</span>
-                                }
-                            </td>
-                            <td>
-                                <div class="action-btns">
-                                    <button class="btn-icon btn-view" title="View" @onclick="() => OpenViewModal(group)">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
-                                    <button class="btn-icon btn-edit" title="Edit" @onclick="() => OpenEditModal(group)">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn-icon btn-delete" title="Delete" @onclick="() => OpenDeleteConfirm(group)">
-                                        <i class="bi bi-trash3"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div class="groups-grid">
+            @foreach (var group in FilteredGroups)
+            {
+                <div class="group-card">
+                    <div class="group-card-header">
+                        <div class="group-card-icon">
+                            <i class="bi bi-collection-play-fill"></i>
+                        </div>
+                        <div class="group-card-status @(group.Status.ToString().ToLower())">
+                            @group.Status
+                        </div>
+                    </div>
+                    <div class="group-card-body">
+                        <h3 class="group-card-title">@group.Name</h3>
+                        <p class="group-card-description">@(group.Description ?? "No description")</p>
+                        <div class="group-card-stats">
+                            <div class="stat-item">
+                                <i class="bi bi-book"></i>
+                                <span>@group.Course?.Name</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="bi bi-person-badge"></i>
+                                <span>@group.Mentor?.FullName</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="bi bi-people"></i>
+                                <span>@group.CurrentStudentCount / @group.MaxStudents</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="bi bi-calendar3"></i>
+                                <span>@group.StartDate.ToString("dd.MM.yyyy")</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="group-card-footer">
+                        <button class="card-btn view" @onclick="() => OpenViewModal(group)">
+                            <i class="bi bi-eye"></i> View
+                        </button>
+                        <button class="card-btn edit" @onclick="() => OpenEditModal(group)">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                        <button class="card-btn students" @onclick="() => GoToGroupStudents(group.Id)">
+                            <i class="bi bi-people-fill"></i> Students
+                        </button>
+                        <button class="card-btn delete" @onclick="() => OpenDeleteConfirm(group)">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </div>
+                </div>
+            }
         </div>
     }
 </div>
@@ -158,14 +143,26 @@
                         <label>Course <span class="required">*</span></label>
                         <div class="premium-input-wrapper">
                             <i class="bi bi-book"></i>
-                            <input type="number" @bind="createDto.CourseId" placeholder="Course ID" />
+                            <select @bind="createDto.CourseId">
+                                <option value="0">Select Course</option>
+                                @foreach (var course in courses)
+                                {
+                                    <option value="@course.Id">@course.Name</option>
+                                }
+                            </select>
                         </div>
                     </div>
                     <div class="premium-form-group">
                         <label>Mentor <span class="required">*</span></label>
                         <div class="premium-input-wrapper">
                             <i class="bi bi-person-badge"></i>
-                            <input type="number" @bind="createDto.MentorId" placeholder="Mentor ID" />
+                            <select @bind="createDto.MentorId">
+                                <option value="0">Select Mentor</option>
+                                @foreach (var mentor in mentors)
+                                {
+                                    <option value="@mentor.Id">@mentor.FullName</option>
+                                }
+                            </select>
                         </div>
                     </div>
                     <div class="premium-form-group">
@@ -227,6 +224,7 @@
 }
 
 @* VIEW MODAL *@
+@* VIEW MODAL *@
 @if (showViewModal && selectedGroup != null)
 {
     <div class="modal-overlay" @onclick="CloseModals">
@@ -244,13 +242,14 @@
                 </button>
             </div>
             <div class="premium-modal-body">
+                <!-- Group Info -->
                 <div class="profile-header-group">
                     <div class="profile-avatar-large group-color">
                         <i class="bi bi-collection-play-fill" style="font-size: 40px;"></i>
                     </div>
                     <div class="profile-info-large">
                         <h3 class="profile-name">@selectedGroup.Name</h3>
-                        <span class="profile-email">@selectedGroup.Course.Name</span>
+                        <span class="profile-email">@selectedGroup.Course?.Name</span>
                         <div class="profile-status-toggle">
                             <span class="status-label">Status:</span>
                             <div class="group-status-badge @(selectedGroup.Status.ToString().ToLower())">
@@ -260,14 +259,25 @@
                     </div>
                 </div>
 
+                <!-- Group Details -->
                 <div class="details-grid">
-                    <div class="detail-card">
+                    <div class="detail-card clickable" @onclick="() => GoToMentor(selectedGroup.Mentor?.Id)">
                         <div class="detail-icon">
                             <i class="bi bi-person-badge"></i>
                         </div>
                         <div class="detail-content">
                             <label>Mentor</label>
-                            <p>@selectedGroup.Mentor.FullName</p>
+                            <p>@(selectedGroup.Mentor?.FullName ?? "Not assigned")</p>
+                        </div>
+                    </div>
+
+                    <div class="detail-card clickable" @onclick="() => GoToCourse(selectedGroup.Course?.Id)">
+                        <div class="detail-icon">
+                            <i class="bi bi-book"></i>
+                        </div>
+                        <div class="detail-content">
+                            <label>Course</label>
+                            <p>@(selectedGroup.Course?.Name ?? "Not assigned")</p>
                         </div>
                     </div>
 
@@ -278,16 +288,6 @@
                         <div class="detail-content">
                             <label>Period</label>
                             <p>@selectedGroup.StartDate.ToString("dd MMM yyyy") - @(selectedGroup.EndDate?.ToString("dd MMM yyyy") ?? "Ongoing")</p>
-                        </div>
-                    </div>
-
-                    <div class="detail-card">
-                        <div class="detail-icon">
-                            <i class="bi bi-people"></i>
-                        </div>
-                        <div class="detail-content">
-                            <label>Students</label>
-                            <p>@selectedGroup.CurrentStudentCount / @selectedGroup.MaxStudents</p>
                         </div>
                     </div>
 
@@ -314,17 +314,66 @@
                         </div>
                     }
                 </div>
+
+                <!-- Students Section -->
+                <div class="students-section">
+                    <div class="students-section-header">
+                        <h4><i class="bi bi-people-fill"></i> Students in this group</h4>
+                        <span class="students-count">@(groupStudents?.Count ?? 0) / @selectedGroup.MaxStudents</span>
+                    </div>
+                    
+                    @if (isLoadingStudents)
+                    {
+                        <div class="loading-small">
+                            <div class="spinner-small"></div>
+                            <span>Loading students...</span>
+                        </div>
+                    }
+                    else if (groupStudents == null || !groupStudents.Any())
+                    {
+                        <div class="empty-students">
+                            <i class="bi bi-person-x"></i>
+                            <p>No students in this group yet</p>
+                            <button class="btn-small" @onclick="() => GoToGroupStudents(selectedGroup.Id)">
+                                <i class="bi bi-plus-lg"></i> Add Students
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="students-list">
+                            @foreach (var student in groupStudents)
+                            {
+                                <div class="student-item">
+                                    <div class="student-avatar-small">
+                                        @GetInitials(student.FullName)
+                                    </div>
+                                    <div class="student-info">
+                                        <div class="student-name">@student.FullName</div>
+                                        <div class="student-details">
+                                            <span><i class="bi bi-envelope"></i> @student.Email</span>
+                                            <span><i class="bi bi-telephone"></i> @(student.Phone ?? "—")</span>
+                                            <span><i class="bi bi-calendar-check"></i> Enrolled: @student.EnrollDate.ToString("dd.MM.yyyy")</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
             </div>
             <div class="premium-modal-footer">
                 <button class="premium-btn-secondary" @onclick="CloseModals">Close</button>
                 <button class="premium-btn-edit" @onclick="(() => { CloseModals(); OpenEditModal(selectedGroup); })">
                     <i class="bi bi-pencil"></i> Edit Group
                 </button>
+                <button class="premium-btn-primary" @onclick="() => GoToGroupStudents(selectedGroup.Id)">
+                    <i class="bi bi-people-fill"></i> Manage Students
+                </button>
             </div>
         </div>
     </div>
 }
-
 @* DELETE MODAL *@
 @if (showDeleteConfirm && selectedGroup != null)
 {
@@ -395,10 +444,16 @@
                         </div>
                     </div>
                     <div class="premium-form-group">
-                        <label>Mentor ID</label>
+                        <label>Mentor</label>
                         <div class="premium-input-wrapper">
                             <i class="bi bi-person-badge"></i>
-                            <input type="number" @bind="selectedGroup.Mentor.Id" />
+                            <select @bind="editMentorId">
+                                <option value="0">Select Mentor</option>
+                                @foreach (var mentor in mentors)
+                                {
+                                    <option value="@mentor.Id">@mentor.FullName</option>
+                                }
+                            </select>
                         </div>
                     </div>
                     <div class="premium-form-group">
@@ -457,11 +512,16 @@
 
 @code {
     private List<GroupResponseDto> groups = new();
+    private List<CourseResponseDto> courses = new();
+    private List<MentorShortDto> mentors = new();
+    private List<StudentResponseDto>? groupStudents;
     private bool isLoading = true;
     private bool isSaving = false;
+    private bool isLoadingStudents = false;
     private string searchQuery = "";
     private string filterStatus = "";
     private string errorMessage = "";
+    private int editMentorId = 0;
 
     private bool showCreateModal = false;
     private bool showViewModal = false;
@@ -475,13 +535,40 @@
         groups.Where(g =>
             (string.IsNullOrEmpty(searchQuery) ||
              g.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-             g.Course.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-             g.Mentor.FullName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
+             (g.Course?.Name?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false) ||
+             (g.Mentor?.FullName?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false)) &&
             (string.IsNullOrEmpty(filterStatus) || g.Status.ToString() == filterStatus));
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadGroups();
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var groupsTask = GroupService.GetAllAsync();
+            var coursesTask = CourseService.GetAllAsync();
+            var mentorsTask = MentorService.GetAllShortAsync();
+
+            await Task.WhenAll(groupsTask, coursesTask, mentorsTask);
+
+            groups = groupsTask.Result ?? new();
+            courses = coursesTask.Result ?? new();
+            mentors = mentorsTask.Result ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
     }
 
     private async Task LoadGroups()
@@ -490,7 +577,6 @@
         try
         {
             groups = await GroupService.GetAllAsync() ?? new();
-            Console.WriteLine($"Loaded {groups.Count} groups");
         }
         catch (Exception ex)
         {
@@ -504,6 +590,27 @@
         }
     }
 
+    private async Task LoadGroupStudents(int groupId)
+{
+    isLoadingStudents = true;
+    StateHasChanged();
+    
+    try
+    {
+        var groupWithStudents = await GroupService.GetWithStudentsAsync(groupId);
+        groupStudents = groupWithStudents?.Students?.ToList() ?? new List<StudentResponseDto>();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error loading students: {ex.Message}");
+        groupStudents = new List<StudentResponseDto>();
+    }
+    finally
+    {
+        isLoadingStudents = false;
+        StateHasChanged();
+    }
+}
     private void OpenCreateModal()
     {
         createDto = new()
@@ -519,11 +626,13 @@
     {
         selectedGroup = group;
         showViewModal = true;
+        _ = LoadGroupStudents(group.Id);
     }
 
     private void OpenEditModal(GroupResponseDto group)
     {
         selectedGroup = group;
+        editMentorId = group.Mentor?.Id ?? 0;
         showEditModal = true;
     }
 
@@ -540,12 +649,46 @@
         showEditModal = false;
         showDeleteConfirm = false;
         selectedGroup = null;
+        groupStudents = null;
         errorMessage = "";
+        editMentorId = 0;
         StateHasChanged();
+    }
+
+    private void GoToGroupStudents(int groupId)
+    {
+        Navigation.NavigateTo($"/groupstudents?groupId={groupId}");
+    }
+
+    private void GoToMentor(int? mentorId)
+    {
+        if (mentorId.HasValue && mentorId > 0)
+        {
+            Navigation.NavigateTo($"/mentors/{mentorId}");
+        }
+    }
+
+    private void GoToCourse(int? courseId)
+    {
+        if (courseId.HasValue && courseId > 0)
+        {
+            Navigation.NavigateTo($"/courses/{courseId}");
+        }
     }
 
     private async Task CreateGroup()
     {
+        if (createDto.CourseId == 0)
+        {
+            errorMessage = "Please select a course";
+            return;
+        }
+        if (createDto.MentorId == 0)
+        {
+            errorMessage = "Please select a mentor";
+            return;
+        }
+
         isSaving = true;
         errorMessage = "";
         StateHasChanged();
@@ -557,6 +700,10 @@
             {
                 await LoadGroups();
                 CloseModals();
+            }
+            else
+            {
+                errorMessage = "Failed to create group. Please try again.";
             }
         }
         catch (Exception ex)
@@ -584,7 +731,7 @@
             var updateDto = new GroupUpdateDto
             {
                 Name = selectedGroup.Name,
-                MentorId = selectedGroup.Mentor.Id,
+                MentorId = editMentorId,
                 EndDate = selectedGroup.EndDate,
                 MaxStudents = selectedGroup.MaxStudents,
                 Description = selectedGroup.Description,
@@ -596,6 +743,10 @@
             {
                 await LoadGroups();
                 CloseModals();
+            }
+            else
+            {
+                errorMessage = "Failed to update group. Please try again.";
             }
         }
         catch (Exception ex)

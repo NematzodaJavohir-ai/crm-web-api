@@ -1,0 +1,526 @@
+﻿@page "/attendance/{lessonId:int}"
+@page "/attendance"
+@using BlazorApp.ApiServices.Interfaces
+@using BlazorApp.DTOs.LessonDto
+@using BlazorApp.DTOs.AttendanceDto
+@using BlazorApp.DTOs.GroupDto
+@inject ILessonApiService LessonService
+@inject IAttendanceApiService AttendanceService
+@inject IGroupApiService GroupService
+@inject NavigationManager Navigation
+
+<div class="attendance-page">
+    @if (isLoading)
+    {
+        <div class="loading-wrap">
+            <div class="spinner"></div>
+            <span>Loading attendance...</span>
+        </div>
+    }
+    else if (lessonId == 0)
+    {
+        <div class="select-lesson-panel">
+            <div class="page-header">
+                <div class="page-header-left">
+                    <h1 class="page-title">Attendance Journal</h1>
+                    <span class="page-subtitle">Select a lesson to view attendance</span>
+                </div>
+            </div>
+
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label>Select Group</label>
+                    <select @onchange="OnGroupChanged">
+    <option value="0">-- Select group --</option>
+    @foreach (var g in groups)
+    {
+        <option value="@g.Id" selected="@(selectedGroupId == g.Id)">
+            @g.Name
+        </option>
+    }
+</select>
+                </div>
+                <div class="filter-group">
+                    <label>Select Lesson</label>
+                    <select @bind="selectedLessonId">
+                        <option value="0">-- Select lesson --</option>
+                        @foreach (var l in lessons)
+                        {
+                            <option value="@l.Id">Week @l.WeekNumber: @l.Title (@l.LessonDate.ToString("dd.MM.yyyy"))</option>
+                        }
+                    </select>
+                </div>
+                <button class="btn-load" @onclick="LoadSelectedLesson" disabled="@(selectedLessonId == 0)">
+                    <i class="bi bi-check-lg"></i> Load Attendance
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="error-alert">
+                    <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
+                </div>
+            }
+        </div>
+    }
+    else if (lesson == null)
+    {
+        <div class="empty-state">
+            <i class="bi bi-exclamation-triangle"></i>
+            <h3>Lesson not found</h3>
+            <button class="btn-back-action" @onclick="GoBack">
+                <i class="bi bi-arrow-left"></i> Go Back
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="page-header">
+            <div class="page-header-left">
+                <button class="btn-back" @onclick="GoBack">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                <div>
+                    <h1 class="page-title">Attendance Journal</h1>
+                    <span class="page-subtitle">
+                        @lesson.GroupName &nbsp;·&nbsp; Week @lesson.WeekNumber &nbsp;·&nbsp;
+                        @lesson.LessonDate.ToString("dd MMM yyyy")
+                    </span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="lesson-badge">
+                    <i class="bi bi-calendar3"></i>
+                    @lesson.Title
+                </div>
+                <button class="btn-save" @onclick="SaveAll" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="btn-spinner"></span>
+                        <span>Saving...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-floppy"></i>
+                        <span>Save All</span>
+                    }
+                </button>
+            </div>
+        </div>
+
+        @if (saveSuccess)
+        {
+            <div class="success-alert">
+                <i class="bi bi-check-circle-fill"></i>
+                All changes saved successfully!
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="error-alert">
+                <i class="bi bi-exclamation-circle-fill"></i>
+                @errorMessage
+            </div>
+        }
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon purple">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">@rows.Count</span>
+                    <span class="stat-label">Total Students</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <i class="bi bi-person-check-fill"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">@rows.Count(r => r.IsPresent)</span>
+                    <span class="stat-label">Present</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon red">
+                    <i class="bi bi-person-x-fill"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">@rows.Count(r => !r.IsPresent)</span>
+                    <span class="stat-label">Absent</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <i class="bi bi-star-fill"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-value">
+                        @(rows.Any() ? rows.Average(r => r.Score).ToString("0.0") : "0.0")
+                    </span>
+                    <span class="stat-label">Avg Score</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <div class="table-header">
+                <span class="table-title">Student Scores</span>
+                <div class="quick-actions">
+                    <button class="btn-quick" @onclick="MarkAllPresent">
+                        <i class="bi bi-check2-all"></i> All Present
+                    </button>
+                    <button class="btn-quick danger" @onclick="MarkAllAbsent">
+                        <i class="bi bi-x-circle"></i> All Absent
+                    </button>
+                </div>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width:40px">#</th>
+                        <th>Student</th>
+                        <th style="width:100px">Present</th>
+                        <th style="width:120px">Score</th>
+                        <th style="width:120px">Homework</th>
+                        <th style="width:120px">HW Score</th>
+                        <th>Mentor Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var (row, i) in rows.Select((r, i) => (r, i)))
+                    {
+                        <tr class="@(!row.IsPresent ? "row-absent" : "")">
+                            <td class="td-num">@(i + 1)</td>
+                            <td>
+                                <div class="student-cell">
+                                    <div class="student-avatar @(row.IsPresent ? "" : "absent")">
+                                        @GetInitials(row.StudentName)
+                                    </div>
+                                    <div class="student-info">
+                                        <span class="student-name">@row.StudentName</span>
+                                        @if (!string.IsNullOrEmpty(row.AbsenceReason))
+                                        {
+                                            <span class="absence-reason">
+                                                <i class="bi bi-chat-quote"></i>
+                                                @row.AbsenceReason
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <label class="toggle">
+                                    <input type="checkbox"
+                                           checked="@row.IsPresent"
+                                           @onchange="e => OnPresentChanged(row, (bool)e.Value!)" />
+                                    <span class="toggle-track">
+                                        <span class="toggle-thumb"></span>
+                                    </span>
+                                </label>
+                            </td>
+                            <td>
+                                <div class="score-wrap @(!row.IsPresent ? "disabled" : "")">
+                                    <input type="number"
+                                           class="score-input"
+                                           value="@row.Score"
+                                           min="0" max="100"
+                                           disabled="@(!row.IsPresent)"
+                                           @onchange="e => OnScoreChanged(row, e.Value?.ToString())" />
+                                    <span class="score-max">/100</span>
+                                </div>
+                            </td>
+                            <td>
+                                <label class="toggle">
+                                    <input type="checkbox"
+                                           checked="@row.HomeworkDone"
+                                           @onchange="e => OnHomeworkChanged(row, (bool)e.Value!)" />
+                                    <span class="toggle-track">
+                                        <span class="toggle-thumb"></span>
+                                    </span>
+                                </label>
+                            </td>
+                            <td>
+                                <div class="score-wrap @(!row.HomeworkDone ? "disabled" : "")">
+                                    <input type="number"
+                                           class="score-input"
+                                           value="@row.HomeworkScore"
+                                           min="0" max="100"
+                                           disabled="@(!row.HomeworkDone)"
+                                           @onchange="e => OnHwScoreChanged(row, e.Value?.ToString())" />
+                                    <span class="score-max">/100</span>
+                                </div>
+                            </td>
+                            <td>
+                                <input type="text"
+                                       class="note-input"
+                                       value="@row.MentorNote"
+                                       placeholder="Add note..."
+                                       @onchange="e => row.MentorNote = e.Value?.ToString()" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="bottom-bar">
+            <span class="unsaved-hint">
+                @if (hasChanges)
+                {
+                    <i class="bi bi-circle-fill text-warning"></i>
+                    <span>You have unsaved changes</span>
+                }
+            </span>
+            <button class="btn-save" @onclick="SaveAll" disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <span class="btn-spinner"></span>
+                    <span>Saving...</span>
+                }
+                else
+                {
+                    <i class="bi bi-floppy"></i>
+                    <span>Save All Changes</span>
+                }
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int lessonId { get; set; }
+
+    private List<GroupResponseDto> groups = new();
+    private List<LessonResponseDto> lessons = new();
+    private int selectedGroupId = 0;
+    private int selectedLessonId = 0;
+    private LessonWithAttendancesDto? lesson;
+    private List<AttendanceRow> rows = new();
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool saveSuccess = false;
+    private bool hasChanges = false;
+    private string errorMessage = "";
+
+    private class AttendanceRow
+    {
+        public int Id { get; set; }
+        public int StudentId { get; set; }
+        public string StudentName { get; set; } = "";
+        public string? AbsenceReason { get; set; }
+        public bool IsPresent { get; set; }
+        public int Score { get; set; }
+        public bool HomeworkDone { get; set; }
+        public int HomeworkScore { get; set; }
+        public string? MentorNote { get; set; }
+        public bool IsNew { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGroups();
+        
+        if (lessonId > 0)
+        {
+            selectedLessonId = lessonId;
+            await LoadLessonDetails();
+            await LoadData();
+        }
+        
+        isLoading = false;
+    }
+
+    private async Task LoadGroups()
+    {
+        groups = await GroupService.GetAllAsync() ?? new();
+    }
+
+    private async Task OnGroupChanged(ChangeEventArgs e)
+    {
+        selectedGroupId = int.Parse(e.Value?.ToString() ?? "0");
+        if (selectedGroupId > 0)
+        {
+            lessons = await LessonService.GetByGroupIdAsync(selectedGroupId) ?? new();
+        }
+        else
+        {
+            lessons.Clear();
+        }
+        selectedLessonId = 0;
+        StateHasChanged();
+    }
+
+    private async Task LoadLessonDetails()
+    {
+        var lessonDetail = await LessonService.GetByIdAsync(selectedLessonId);
+        if (lessonDetail != null)
+        {
+            selectedGroupId = lessonDetail.GroupId;
+            await LoadGroups();
+            await OnGroupChanged(new ChangeEventArgs { Value = selectedGroupId.ToString() });
+        }
+    }
+
+    private async Task LoadSelectedLesson()
+    {
+        if (selectedLessonId > 0)
+        {
+            lessonId = selectedLessonId;
+            await LoadData();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        errorMessage = "";
+        
+        try
+        {
+            lesson = await LessonService.GetWithAttendancesAsync(lessonId);
+
+            if (lesson?.Attendances != null)
+            {
+                rows = lesson.Attendances.Select(a => new AttendanceRow
+                {
+                    Id = a.Id,
+                    StudentId = a.StudentId,
+                    StudentName = a.StudentName,
+                    AbsenceReason = a.AbsenceReason,
+                    IsPresent = a.IsPresent,
+                    Score = a.Score,
+                    HomeworkDone = a.HomeworkDone,
+                    HomeworkScore = a.HomeworkScore,
+                    MentorNote = a.MentorNote,
+                    IsNew = false
+                }).ToList();
+            }
+            else if (lesson != null)
+            {
+                rows = new List<AttendanceRow>();
+                errorMessage = "No attendance records found for this lesson.";
+            }
+            else
+            {
+                errorMessage = "Lesson not found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnPresentChanged(AttendanceRow row, bool value)
+    {
+        row.IsPresent = value;
+        if (!value)
+        {
+            row.Score = 0;
+        }
+        hasChanges = true;
+        StateHasChanged();
+    }
+
+    private void OnScoreChanged(AttendanceRow row, string? value)
+    {
+        if (int.TryParse(value, out int score))
+            row.Score = Math.Clamp(score, 0, 100);
+        hasChanges = true;
+    }
+
+    private void OnHomeworkChanged(AttendanceRow row, bool value)
+    {
+        row.HomeworkDone = value;
+        if (!value) row.HomeworkScore = 0;
+        hasChanges = true;
+        StateHasChanged();
+    }
+
+    private void OnHwScoreChanged(AttendanceRow row, string? value)
+    {
+        if (int.TryParse(value, out int score))
+            row.HomeworkScore = Math.Clamp(score, 0, 100);
+        hasChanges = true;
+    }
+
+    private void MarkAllPresent()
+    {
+        foreach (var r in rows) r.IsPresent = true;
+        hasChanges = true;
+        StateHasChanged();
+    }
+
+    private void MarkAllAbsent()
+    {
+        foreach (var r in rows)
+        {
+            r.IsPresent = false;
+            r.Score = 0;
+        }
+        hasChanges = true;
+        StateHasChanged();
+    }
+
+    private async Task SaveAll()
+    {
+        isSaving = true;
+        saveSuccess = false;
+        errorMessage = "";
+        StateHasChanged();
+
+        var failed = new List<string>();
+
+        foreach (var row in rows)
+        {
+            var dto = new AttendanceUpdateDto
+            {
+                IsPresent = row.IsPresent,
+                Score = row.Score,
+                HomeworkDone = row.HomeworkDone,
+                HomeworkScore = row.HomeworkScore,
+                MentorNote = row.MentorNote
+            };
+
+            var result = await AttendanceService.UpdateAsync(row.Id, dto);
+            if (result == null)
+                failed.Add(row.StudentName);
+        }
+
+        isSaving = false;
+        hasChanges = false;
+
+        if (failed.Any())
+            errorMessage = $"Failed to save: {string.Join(", ", failed)}";
+        else
+            saveSuccess = true;
+
+        StateHasChanged();
+
+        if (saveSuccess)
+        {
+            await Task.Delay(3000);
+            saveSuccess = false;
+            StateHasChanged();
+        }
+    }
+
+    private void GoBack() => Navigation.NavigateTo("/lessons");
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "?";
+        var parts = name.Trim().Split(' ');
+        if (parts.Length >= 2) return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return name.Length > 0 ? name[0].ToString().ToUpper() : "?";
+    }
+}

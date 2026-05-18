@@ -9,12 +9,16 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Dtos\AttendanceDto\" />
+    <Folder Include="Dtos\AuditLogDto\" />
     <Folder Include="Dtos\CourseDto\" />
     <Folder Include="Dtos\GroupDto\" />
-    <Folder Include="Dtos\LessonDto\" />
+    <Folder Include="Dtos\HomeworkDto\" />
+    <Folder Include="Dtos\LessonScoreDto\" />
     <Folder Include="Dtos\MentorDto\" />
     <Folder Include="Dtos\NotificationDto\" />
+    <Folder Include="Dtos\PaymentDto\" />
+    <Folder Include="Dtos\ProfileDto\" />
+    <Folder Include="Dtos\SheduleDto\" />
     <Folder Include="Dtos\StudentDto\" />
     <Folder Include="Dtos\WeeklyResultDto\" />
   </ItemGroup>

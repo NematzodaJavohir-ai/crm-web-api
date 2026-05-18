@@ -15,6 +15,9 @@ public class StudentWithGroupsDto
     public string? GithubUrl { get; set; }
     public string? AboutMe { get; set; }
     public DateTime? DateOfBirth { get; set; }
+    public decimal Balance { get; set; }
+    public bool IsActive { get; set; }
     public DateTime EnrollDate { get; set; }
+    public int ActiveGroupsCount { get; set; }
     public IEnumerable<GroupShortDto> Groups { get; set; } = new List<GroupShortDto>();
 }

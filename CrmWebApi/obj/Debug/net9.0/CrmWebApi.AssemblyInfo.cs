@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CrmWebApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6eacfdc4c18e17bfd70aa6ae1757036b3bcfc79f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+470b1b5ce3fde5ff2a23a15115996bb23765b0e5")]
 [assembly: System.Reflection.AssemblyProductAttribute("CrmWebApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CrmWebApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

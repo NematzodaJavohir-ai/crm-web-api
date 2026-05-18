@@ -1,6 +1,8 @@
 using System;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using BlazorApp.ApiServices.Interfaces;
 using BlazorApp.DTOs.MentorDto;
 
@@ -8,6 +10,18 @@ namespace BlazorApp.ApiServices;
 
 public class MentorService(HttpClient client) : IMentorApiService
 {
+    public async Task<List<MentorShortDto>> GetAllShortAsync()
+{
+    try
+    {
+        return await client.GetFromJsonAsync<List<MentorShortDto>>("api/mentors/short") ?? new();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"GetAllShortAsync error: {ex.Message}");
+        return new List<MentorShortDto>();
+    }
+}
     public async Task<MentorResponseDto?> CreateAsync(MentorCreateDto dto)
     {
         try
@@ -61,19 +75,18 @@ public class MentorService(HttpClient client) : IMentorApiService
     public async Task<MentorWithGroupsDto?> GetWithGroupsAsync(int id)
         => await client.GetFromJsonAsync<MentorWithGroupsDto>($"api/mentors/{id}/with-groups");
 
-   public async Task<bool> SetActiveAsync(int id, bool isActive)
-{
-    try
+    public async Task<bool> SetActiveAsync(int id, bool isActive)
     {
-        
-        var response = await client.PatchAsync($"api/mentors/{id}/set-active?isActive={isActive}", null);
-        return response.IsSuccessStatusCode;
+        try
+        {
+            var response = await client.PatchAsync($"api/mentors/{id}/set-active?isActive={isActive}", null);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
     }
-    catch
-    {
-        return false;
-    }
-}
 
     public async Task<MentorResponseDto?> UpdateMyProfileAsync(int userId, MentorUpdateDto dto)
     {
@@ -130,6 +143,45 @@ public class MentorService(HttpClient client) : IMentorApiService
         {
             Console.WriteLine($"Update mentor error: {ex.Message}");
             throw;
+        }
+    }
+
+    public async Task<MentorFullProfileDto?> GetFullProfileAsync(int id)
+    {
+        try
+        {
+            return await client.GetFromJsonAsync<MentorFullProfileDto>($"api/mentors/{id}/full-profile");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GetFullProfileAsync error: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<MentorFullProfileDto?> GetMyFullProfileAsync()
+    {
+        try
+        {
+            return await client.GetFromJsonAsync<MentorFullProfileDto>("api/mentors/my-full-profile");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GetMyFullProfileAsync error: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<MentorResponseDto?> GetMyProfileAsync()
+    {
+        try
+        {
+            return await client.GetFromJsonAsync<MentorResponseDto>("api/mentors/me");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GetMyProfileAsync error: {ex.Message}");
+            return null;
         }
     }
 }
